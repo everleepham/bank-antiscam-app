@@ -86,6 +86,17 @@ The system makes **split-second decisions** on user access levels.
 
    - Final score stored in Redis for ultra-fast lookup
 
+6. **Limitations based on Trust Score**
+
+| Score     | Description                               | Limitations                                  |
+|-----------|-------------------------------------------|----------------------------------------------|
+| 90 – 100  | Trusted user                              | No restrictions                              |
+| 75 – 89   | Normal user                               | Max €5,000 total in 3 months                 |
+| 50 – 74   | Risky user                                | Max 10 transactions > €1,000 in 3 months     |
+| 30 – 49   | Fraud-prone user                          | Max 10 transactions/month, each < €100       |
+| **< 30**  | **Critical – Account temporarily locked** | No transactions allowed, identity verification required |
+
+
 ---
 
 ## Future Improvements
