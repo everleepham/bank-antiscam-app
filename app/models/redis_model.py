@@ -1,28 +1,22 @@
 import redis
-import json
-from .base_model import BaseModel
+from typing import Optional
 from app.utils.config import Config
 
-class RedisModel(BaseModel):
+class RedisTrustScoreModel:
     def __init__(self):
         self.redis = redis.from_url(Config.REDIS_URI)
     
-    def create(self, data):
-        item_id = data.get('id', 'default_id')
-        self.redis.hmset(f"item:{item_id}", data)
-        return item_id
+    def get_score(self, user_id: str) -> Optional[float]:
+        score = self.redis.get(user_id)
+        if score is not None:
+            try:
+                return float(score)
+            except ValueError:
+                return None
+        return None
     
-    def read(self, item_id=None):
-        if item_id:
-            return self.redis.hgetall(f"item:{item_id}")
-        keys = self.redis.keys("item:*")
-        return [self.redis.hgetall(key) for key in keys]
+    def set_score(self, user_id: str, score: float, expire_seconds: int = 3600) -> bool: #expire time ~ 1 hour
+        return self.redis.set(user_id, str(score), ex=expire_seconds)
     
-    def update(self, item_id, data):
-        if self.redis.exists(f"item:{item_id}"):
-            self.redis.hmset(f"item:{item_id}", data)
-            return True
-        return False
-    
-    def delete(self, item_id):
-        return self.redis.delete(f"item:{item_id}") > 0
+    def exists(self, user_id: str) -> bool:
+        return self.redis.exists(user_id) == 1
