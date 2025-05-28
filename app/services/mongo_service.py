@@ -1,21 +1,30 @@
-from app.models.mongo_model import MongoModel
+from app.models.mongo_model import User, Transaction, DeviceLog
 from app.services.base_service import BaseService
 
 class MongoService(BaseService):
     def __init__(self):
-        self.model = MongoModel()
+        self.user_model = User()
+        self.transaction_model = Transaction()
+        self.device_log_model = DeviceLog()
     
-    def create_item(self, data):
-        return self.model.create(data)
+    # User
+    def create_user(self, data):
+        return self.user_model.create(data)
     
-    def get_item(self, item_id):
-        return self.model.read(item_id)
+    def get_user_by_id(self, user_id):
+        return self.user_model.read(user_id)
     
-    def get_all_items(self):
-        return self.model.read()
+    # Transactions
+    def create_transaction(self, data):
+        return self.transaction_model.create(data)
     
-    def update_item(self, item_id, data):
-        return self.model.update(item_id, data)
+    def get_transaction_by_id(self, transaction_id):
+        return self.transaction_model.read(transaction_id)
     
-    def delete_item(self, item_id):
-        return self.model.delete(item_id)
+    # Device Logs
+    def log_device(self, data):
+        return self.device_log_model.create(data)
+
+    def get_device_log_by_id(self, device_id):
+        return self.device_log_model.read(device_id)
+    
