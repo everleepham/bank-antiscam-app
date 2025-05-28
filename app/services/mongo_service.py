@@ -1,7 +1,6 @@
 from app.models.mongo_model import User, Transaction, DeviceLog
-from app.services.base_service import BaseService
 
-class MongoService(BaseService):
+class MongoService:
     def __init__(self):
         self.user_model = User()
         self.transaction_model = Transaction()
