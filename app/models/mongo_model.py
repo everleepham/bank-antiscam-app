@@ -16,11 +16,16 @@ class User(BaseModel):
     password: str = Field(..., description="User password")
     new_user: bool = Field(default=True, description="Is the user new?")
     score: int = Field(default=0, description="User score")
+    
+class UserInfo(BaseModel):
+    user_id: str = Field(..., description="Unique user identifier")
+    user_fname: str = Field(..., description="User first name")
+    user_lname: str = Field(..., description="User last name")
 
 class Transaction(BaseModel):
-    sender_id: str = Field(..., description="Sender user ID")
+    sender: str = UserInfo
     sender_device_id: str = Field(..., description="Unique device identifier")
-    recipient_id: str = Field(..., description="Receiver user ID")
+    recipient: str = UserInfo
     amount: float = Field(..., gt=0, description="Transaction amount")
     timestamp: datetime = Field(default_factory=datetime.now, description="Transaction timestamp")
     status: TransactionStatus = Field(default=TransactionStatus.PENDING)
@@ -34,5 +39,3 @@ class DeviceLog(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="Log timestamp")
     location: str = Field(..., description="Device location")
         
-        
-
