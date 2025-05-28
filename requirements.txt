@@ -1,7 +1,6 @@
-flask
-redis
-pymongo
-neo4j
-python-dotenv
-pydantic
-enum
+flask==2.3.2
+redis==4.5.5
+pymongo==4.3.3
+neo4j==5.8.0
+python-dotenv==1.0.0
+pydantic==1.10.11
