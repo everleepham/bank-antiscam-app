@@ -16,6 +16,7 @@ class TransactionSchema(BaseModel):
     transaction_id: str = Field(..., description="Unique transaction identifier")
     amount: float = Field(..., gt=0, description="Transaction amount")
     status: TransactionStatus = Field(default=TransactionStatus.PENDING)
+    timestamp: str = Field(..., description="Transaction timestamp in ISO format")
     
 class DeviceSchema(BaseModel):
     device_id: str = Field(..., description="Unique device identifier")
@@ -120,6 +121,7 @@ class Neo4jTransactionModel(Neo4jBaseModel):
             transaction_id: $transaction_id,
             amount: $amount,
             status: $status
+            timestamp: $timestamp
         })
         RETURN id(t) AS node_id
         """

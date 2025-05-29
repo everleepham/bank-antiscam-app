@@ -15,13 +15,10 @@ class MongoService:
     
     def get_users_by_device(self, device_id):
         cursor = self.device_log_model.collection.find(
-            {"device_id": device_id},  
-            {"user_id": 1, "_id": 0} # use user_id not _id
+            {"device_id": device_id},
+            {"user_id": 1, "_id": 0}
         )
-        user_ids = set()
-        for doc in cursor:
-            user_ids.add(doc["user_id"])
-        return list(user_ids)
+        return list({doc["user_id"] for doc in cursor})
 
     
     # Transactions
@@ -45,5 +42,9 @@ class MongoService:
         return self.device_log_model.read(device_id)
     
     def get_devices_by_user(self, user_id):
-        return list(self.device_log_model.collection.find({"user_id": user_id}))
-    
+        cursor = self.device_log_model.collection.find(
+            {"user_id": user_id},
+            {"device_id": 1, "_id": 0}
+        )
+        unique_device_ids = {doc["device_id"] for doc in cursor}
+        return list(unique_device_ids)
