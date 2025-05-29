@@ -1,21 +1,21 @@
-from app.models.redis_model import RedisModel
-from app.services.base_service import BaseService
+from typing import Optional
+from app.models.redis_model import RedisTrustScoreModel
 
-class RedisService(BaseService):
+class RedisTrustScoreService:
     def __init__(self):
-        self.model = RedisModel()
+        self.model = RedisTrustScoreModel()
     
-    def create_item(self, data):
-        return self.model.create(data)
-    
-    def get_item(self, item_id):
-        return self.model.read(item_id)
-    
-    def get_all_items(self):
-        return self.model.read()
-    
-    def update_item(self, item_id, data):
-        return self.model.update(item_id, data)
-    
-    def delete_item(self, item_id):
-        return self.model.delete(item_id)
+    def get_score(self, user_id: str) -> Optional[float]:
+        raw = self.model.get(user_id)
+        if raw is not None:
+            try:
+                return float(raw)
+            except ValueError:
+                return None
+        return None
+
+    def set_score(self, user_id: str, score: float, expire_seconds: int = 3600) -> bool:
+        return self.model.set(user_id, str(score), expire_seconds)
+
+    def has_score(self, user_id: str) -> bool:
+        return self.model.exists(user_id)

@@ -1,7 +1,5 @@
-from app.models.neo4j_model import Neo4jUserModel, Neo4jTransactionModel, Neo4jDeviceLogModel
 from neo4j import GraphDatabase
 from app.utils.config import Config
-
 
 class Neo4jService:
     
@@ -75,5 +73,4 @@ class Neo4jService:
         with self.driver.session() as session:
             result = session.run(query, **tx_data)
             return result.data()
-    
     
