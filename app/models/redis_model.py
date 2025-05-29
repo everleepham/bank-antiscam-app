@@ -1,16 +1,15 @@
-import redis
 from typing import Optional
-from app.utils.config import Config
+from app.db.redis import redis_client
 
 class RedisTrustScoreModel:
-    def __init__(self):
-        self.redis = redis.from_url(Config.REDIS_URI)
-    
-    def get(self, key: str) -> Optional[str]:
-        return self.redis.get(key)
+    @staticmethod
+    def get(key: str) -> Optional[str]:
+        return redis_client.get(key)
 
-    def set(self, key: str, value: str, expire_seconds: int = 3600) -> bool:
-        return self.redis.set(key, value, ex=expire_seconds)
+    @staticmethod
+    def set(key: str, value: str, expire_seconds: int = 3600) -> bool:
+        return redis_client.set(key, value, ex=expire_seconds)
 
-    def exists(self, key: str) -> bool:
-        return self.redis.exists(key) == 1
+    @staticmethod
+    def exists(key: str) -> bool:
+        return redis_client.exists(key) == 1

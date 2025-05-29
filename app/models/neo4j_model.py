@@ -1,16 +1,31 @@
-from neo4j import GraphDatabase
-from app.utils.config import Config
+from app.db.neo4j import neo4j_driver
+from pydantic import BaseModel, Field
+from mongo_model import TransactionStatus
 
-class Neo4jUserModel:
-    def __init__(self):
-        self.driver = GraphDatabase.driver(
-            Config.NEO4J_URI,
-            auth=(Config.NEO4J_USER, Config.NEO4J_PASSWORD)
-        )
 
-    def create(self, data):
+class Neo4jBaseModel:
+    driver = neo4j_driver
+    
+class UserSchema(BaseModel):
+    user_id: str = Field(..., description="Unique user identifier")
+    fname: str = Field(..., description="User first name")
+    lname: str = Field(..., description="User last name")
+    score: int = Field(default=0, description="User score")
+    
+class TransactionSchema(BaseModel):
+    transaction_id: str = Field(..., description="Unique transaction identifier")
+    amount: float = Field(..., gt=0, description="Transaction amount")
+    status: TransactionStatus = Field(default=TransactionStatus.PENDING)
+    
+class DeviceSchema(BaseModel):
+    device_id: str = Field(..., description="Unique device identifier")
+    mac_address: str = Field(..., description="Device MAC address")
+    ip_address: str = Field(..., description="Device IP address")
+
+class Neo4jUserModel(Neo4jBaseModel):
+    def create(self, user: UserSchema):
         with self.driver.session() as session:
-            return session.execute_write(self._create_user_node, data)
+            return session.execute_write(self._create_user_node, user.dict())
 
     def read(self, user_id=None):
         with self.driver.session() as session:
@@ -18,9 +33,9 @@ class Neo4jUserModel:
                 return session.execute_read(self._get_user_by_id, user_id)
             return session.execute_read(self._get_all_users)
 
-    def update(self, user_id, data):
+    def update(self, user_id, user: UserSchema):
         with self.driver.session() as session:
-            return session.execute_write(self._update_user, user_id, data)
+            return session.execute_write(self._update_user, user_id, user.dict())
 
     def delete(self, user_id):
         with self.driver.session() as session:
@@ -69,23 +84,19 @@ class Neo4jUserModel:
     def _delete_user(tx, user_id):
         query = """
         MATCH (u:User {user_id: $user_id})
+        WITH u, count(u) AS c
         DELETE u
-        RETURN count(u) > 0 AS deleted
+        RETURN c > 0 AS deleted
         """
         result = tx.run(query, user_id=user_id)
         return result.single()["deleted"]
 
 
-class Neo4jTransactionModel:
-    def __init__(self):
-        self.driver = GraphDatabase.driver(
-            Config.NEO4J_URI,
-            auth=(Config.NEO4J_USER, Config.NEO4J_PASSWORD)
-        )
+class Neo4jTransactionModel(Neo4jBaseModel):
         
-    def create(self, data):
+    def create(self, txn: TransactionSchema):
         with self.driver.session() as session:
-            return session.execute_write(self._create_transaction_node, data)
+            return session.execute_write(self._create_transaction_node, txn.dict())
         
     def read(self, transaction_id=None):
         with self.driver.session() as session:
@@ -93,9 +104,9 @@ class Neo4jTransactionModel:
                 return session.execute_read(self._get_transaction_by_id, transaction_id)
             return session.execute_read(self._get_all_transactions)
         
-    def update(self, transaction_id, data):
+    def update(self, transaction_id, txn: TransactionSchema):
         with self.driver.session() as session:
-            return session.execute_write(self._update_transaction, transaction_id, data)
+            return session.execute_write(self._update_transaction, transaction_id, txn.dict())
         
     def delete(self, transaction_id):
         with self.driver.session() as session:
@@ -108,7 +119,6 @@ class Neo4jTransactionModel:
         CREATE (t:Transaction {
             transaction_id: $transaction_id,
             amount: $amount,
-            timestamp: $timestamp,
             status: $status
         })
         RETURN id(t) AS node_id
@@ -145,23 +155,19 @@ class Neo4jTransactionModel:
     def _delete_transaction(tx, transaction_id):
         query = """
         MATCH (t:Transaction {transaction_id: $transaction_id})
+        WITH count(t) AS c, t
         DELETE t
-        RETURN count(t) > 0 AS deleted
+        RETURN c > 0 AS deleted
         """
         result = tx.run(query, transaction_id=transaction_id)
         return result.single()["deleted"]
     
     
-class Neo4jDeviceModel:
-    def __init__(self):
-        self.driver = GraphDatabase.driver(
-            Config.NEO4J_URI,
-            auth=(Config.NEO4J_USER, Config.NEO4J_PASSWORD)
-        )
+class Neo4jDeviceModel(Neo4jBaseModel):
         
-    def create(self, data):
+    def create(self, device: DeviceSchema):
         with self.driver.session() as session:
-            return session.execute_write(self._create_device_node, data)
+            return session.execute_write(self._create_device_node, device.dict())
         
     def read(self, device_id=None):
         with self.driver.session() as session:
@@ -169,9 +175,9 @@ class Neo4jDeviceModel:
                 return session.execute_read(self._get_device_by_id, device_id)
             return session.execute_read(self._get_all_devices)
         
-    def update(self, device_id, data):
+    def update(self, device_id, device: DeviceSchema):
         with self.driver.session() as session:
-            return session.execute_write(self._update_device, device_id, data)
+            return session.execute_write(self._update_device, device_id, device.dict())
         
     def delete(self, device_id):
         with self.driver.session() as session:
@@ -183,8 +189,7 @@ class Neo4jDeviceModel:
         CREATE (d:Device {
             device_id: $device_id,
             mac_address: $mac_address,
-            ip_address: $ip_address,
-            location: $location
+            ip_address: $ip_address
         })
         RETURN id(d) AS node_id
         """
@@ -220,8 +225,9 @@ class Neo4jDeviceModel:
     def _delete_device(tx, device_id):
         query = """
         MATCH (d:Device {device_id: $device_id})
+        WITH count(d) AS c, d
         DELETE d
-        RETURN count(d) > 0 AS deleted
+        RETURN c > 0 AS deleted
         """
         result = tx.run(query, device_id=device_id)
         return result.single()["deleted"]
