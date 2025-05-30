@@ -55,6 +55,9 @@ class MongoUserModel:
 
     def read(self, user_id: str):
         return self.collection.find_one({"user_id": user_id})
+    
+    def read_by_email(self, email: str):
+        return self.collection.find_one({"email": email})
 
 class MongoTransactionModel:
     def __init__(self):
@@ -69,6 +72,7 @@ class MongoTransactionModel:
 
     def read(self, transaction_id: str):
         return self.collection.find_one({"transaction_id": transaction_id})
+    
     
 class DeviceLogModel:
     def __init__(self):

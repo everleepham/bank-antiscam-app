@@ -20,6 +20,11 @@ class MongoService:
         )
         return list({doc["user_id"] for doc in cursor})
 
+    def login(self, email, password):
+        user = self.user_model.read_by_email(email)
+        if user and user.password == password:
+            return user
+        return None
     
     # Transactions
     def create_transaction(self, txn: Transaction):

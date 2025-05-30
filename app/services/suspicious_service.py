@@ -182,7 +182,7 @@ def calculate_trust_score(user_id, transaction_id=None, device_id=None, debug=Fa
         score += RULES['suspicious_connections']
         log.append("suspicious_connections")
 
-    # Check circular transactions
+    # check circular transactions
     if has_circular_transactions(user_id):
         score += RULES['circular_transaction_detected']
         log.append("circular_transaction_detected")

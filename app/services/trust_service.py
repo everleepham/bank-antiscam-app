@@ -16,7 +16,13 @@ def get_policy_by_score(score: int): # find the limitation by score
             return policy
     return None
 
-def enforce_transaction_policy(user_id: str, amount: float, mongo_model: MongoTransactionModel):
+def enforce_trust_policy(
+    user_id: str,
+    mongo_model: MongoTransactionModel = None,
+    amount: float = None,
+    action: str = "transaction"  # or login
+    
+):   
     # get score
     score = redis.get_score(user_id)
     if score is None:
@@ -31,11 +37,13 @@ def enforce_transaction_policy(user_id: str, amount: float, mongo_model: MongoTr
     restrictions = policy["restrictions"]
     now = datetime.now()
     
-    if restrictions is None:
-        return  
-    
     if restrictions.get("locked"):
         raise HTTPException(403, "Account is locked. Identity verification required")
+    
+
+    # check action, if not transaction, end 
+    if action != "transaction" or not restrictions:
+        return
     
     transactions = list(mongo_model.collection.find({
         "sender.user_id": user_id,
