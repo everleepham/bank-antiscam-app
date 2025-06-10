@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
-from app.services.redis_service import RedisService
+from fastapi import HTTPException
+from flask import Blueprint
+from app.services.redis_service import RedisTrustScoreService
 from app.services.neo4j_service import Neo4jService
 from app.models.mongo_model import MongoTransactionModel
 from app.services.neo4j_service import Neo4jService
@@ -7,11 +8,11 @@ from app.models.neo4j_model import Neo4jTransactionModel
 from app.services.mongo_service import MongoService
 from app.services.trust_service import enforce_trust_policy
 
-router = APIRouter()
-redis = RedisService()
+redis = RedisTrustScoreService()
+bp = Blueprint('transactions', __name__, url_prefix='/transactions')
 
 
-@router.post("/transactions")
+@bp.route('/', methods=['POST'])
 def make_transaction(tx_data: dict):
     enforce_trust_policy(tx_data.sender_id, tx_data.amount, MongoTransactionModel())
     node_transaction_data = {
@@ -31,7 +32,7 @@ def make_transaction(tx_data: dict):
     return {"message": "Transaction created successfully"}
 
 
-@router.get("/transactions/{user_id}")
+@bp.route('/{user_id}', methods=['POST'])
 def get_user_transactions(user_id: str):
     transactions = MongoService().get_transactions_by_sender(user_id)
     if not transactions:

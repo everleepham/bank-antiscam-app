@@ -19,9 +19,9 @@ TRUST_POLICY = [
         "max": 74,
         "level": "risky",
         "restrictions": {
-            "max_high_value_txns": 10,
+            "max_high_value_txns": 3,
             "threshold": 1000,
-            "window_months": 3
+            "window_months": 1
         }
     },
     {

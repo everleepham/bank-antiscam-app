@@ -3,8 +3,8 @@ from app.models.neo4j_model import Neo4jUserModel, Neo4jTransactionModel, Neo4jD
 from datetime import datetime
 from app.utils.trust_rules import RULES
 
-from neo4j_service import Neo4jService
-from mongo_service import MongoService
+from .neo4j_service import Neo4jService
+from .mongo_service import MongoService
 
 # Mongo service
 def check_suspicious_transactions_amount(user_id, transaction_id):
@@ -121,7 +121,6 @@ def has_shared_device_count(user_id, device_id): # multiple users use the same d
         return True
     return False
 
-
 # Neo4j serviceS
 def has_suspicious_connections(user_id):
     neo4j_service = Neo4jService()
@@ -147,10 +146,8 @@ def has_circular_transactions(user_id):
     return circular_transaction is not None
 
 
-def calculate_trust_score(user_id, transaction_id=None, device_id=None, debug=False):
-    score = 100
+def calculate_trust_score(user_id, score, transaction_id=None, device_id=None, debug=False):
     log = []
-
 
     # check suspicious transactions amount
     if check_suspicious_transactions_amount(user_id, transaction_id):

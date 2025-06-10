@@ -1,7 +1,6 @@
 from app.db.neo4j import neo4j_driver
 
 class Neo4jService:
-    
     driver = neo4j_driver
         
     def connect_user_transaction_user(self, tx_data):

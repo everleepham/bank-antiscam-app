@@ -26,6 +26,19 @@ class MongoService:
             return user
         return None
     
+    def get_score(self, user_id):
+        user = self.user_model.read(user_id)
+        if user:
+            return user.score
+        return None
+    
+    def update_score(self, user_id, score=100):
+        user = self.user_model.read(user_id)
+        if user:
+            user.score = score
+            return self.user_model.update(user_id, user)
+        return None
+    
     # Transactions
     def create_transaction(self, txn: Transaction):
         return self.transaction_model.create(txn)

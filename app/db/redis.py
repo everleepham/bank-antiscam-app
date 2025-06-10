@@ -2,4 +2,9 @@
 import redis
 from app.utils.config import Config
 
-redis_client = redis.from_url(Config.REDIS_URI)
+try:
+    redis_client = redis.from_url(Config.REDIS_URI)
+    redis_client.ping()
+    print("Redis connection established.")
+except redis.RedisError as e:
+    print("Redis connection failed:", e)

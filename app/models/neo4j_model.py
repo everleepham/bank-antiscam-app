@@ -1,7 +1,6 @@
 from app.db.neo4j import neo4j_driver
 from pydantic import BaseModel, Field
-from mongo_model import TransactionStatus
-
+from .mongo_model import TransactionStatus
 
 class Neo4jBaseModel:
     driver = neo4j_driver

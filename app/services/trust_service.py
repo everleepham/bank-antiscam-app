@@ -2,12 +2,15 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException
 from app.utils.trust_policies import TRUST_POLICY
 from app.models.mongo_model import MongoTransactionModel
-from app.services.redis_service import RedisService
+from app.services.mongo_service import MongoService
+from app.services.redis_service import RedisTrustScoreService
 from app.services.suspicious_service import calculate_trust_score
 from app.models.mongo_model import TransactionStatus
+from typing import Optional
 
 
-redis = RedisService()
+redis = RedisTrustScoreService()
+mongo = MongoService()
 
 
 def get_policy_by_score(score: int): # find the limitation by score
@@ -16,18 +19,27 @@ def get_policy_by_score(score: int): # find the limitation by score
             return policy
     return None
 
+def get_new_score(user_id: str):
+    old_score = redis.get_score(user_id)
+    if old_score is None:
+        old_score = mongo.get_score(user_id)
+        new_score = calculate_trust_score(user_id)
+    if new_score != old_score:
+        redis.set_score(user_id, new_score)
+        mongo.update_score(user_id, new_score)
+    return new_score
+
 def enforce_trust_policy(
     user_id: str,
     mongo_model: MongoTransactionModel = None,
     amount: float = None,
-    action: str = "transaction"  # or login
+    action: str = "transaction", # or login,
+    score: Optional[int] = None
     
 ):   
     # get score
-    score = redis.get_score(user_id)
     if score is None:
-        score = calculate_trust_score(user_id)
-        redis.set_score(user_id, score)
+        score = get_new_score(user_id)
         
     # get policy matched  
     policy = get_policy_by_score(score)
@@ -40,7 +52,6 @@ def enforce_trust_policy(
     if restrictions.get("locked"):
         raise HTTPException(403, "Account is locked. Identity verification required")
     
-
     # check action, if not transaction, end 
     if action != "transaction" or not restrictions:
         return
