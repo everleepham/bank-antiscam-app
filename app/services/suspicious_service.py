@@ -1,5 +1,4 @@
 from app.models.mongo_model import MongoUserModel, MongoTransactionModel, DeviceLogModel, User, Transaction, DeviceLog, TransactionStatus
-from app.models.neo4j_model import Neo4jUserModel, Neo4jTransactionModel, Neo4jDeviceModel
 from datetime import datetime
 from app.utils.trust_rules import RULES
 
@@ -7,7 +6,7 @@ from .neo4j_service import Neo4jService
 from .mongo_service import MongoService
 
 # Mongo service
-def check_suspicious_transactions_amount(user_id, transaction_id):
+def check_high_transactions_amount(user_id, transaction_id):
 
     txn_model = MongoTransactionModel()
     user_model = MongoUserModel()
@@ -28,7 +27,7 @@ def check_suspicious_transactions_amount(user_id, transaction_id):
     plafond = user.get("plafond", 1000.0)
     amount = transaction.get("amount", 0)
 
-    if amount > plafond:
+    if amount > (plafond * 2):
         txn_model.collection.update_one(
             {"transaction_id": transaction_id},
             {"$set": {
@@ -146,46 +145,35 @@ def has_circular_transactions(user_id):
     return circular_transaction is not None
 
 
-def calculate_trust_score(user_id, score, transaction_id=None, device_id=None, debug=False):
-    log = []
+def log_suspicious_actions(user_id, transaction_id=None, device_id=None):
+    log = set()
 
     # check suspicious transactions amount
-    if check_suspicious_transactions_amount(user_id, transaction_id):
-        score += RULES['high_txn_amount']
-        log.append("high_txn_amount")
+    if check_high_transactions_amount(user_id, transaction_id):
+        log.add('high_txn_amount')
 
     # check suspicious monthly spending
     if check_suspicious_monthly_spent(user_id):
-        score += RULES['high_monthly_spent']
-        log.append("high_monthly_spent")
+        log.add('high_monthly_spent')
 
     # check new account status
     if is_new_account(user_id):
-        score += RULES['new_account']
-        log.append("new_account")
+        log.add('new_account')
 
     # check multiple devices
     if has_multiple_devices(user_id):
-        score += RULES['has_multiple_devices']
-        log.append("has_multiple_devices")
+        log.add("multiple_devices")
 
     # check shared device count
     if has_shared_device_count(user_id, device_id):
-        score += RULES['shared_device_count']
-        log.append("shared_device_count")
+        log.add("shared_device_count")
 
     # check suspicious connections
     if has_suspicious_connections(user_id):
-        score += RULES['suspicious_connections']
-        log.append("suspicious_connections")
+        log.add("suspicious_connections")
 
     # check circular transactions
     if has_circular_transactions(user_id):
-        score += RULES['circular_transaction_detected']
-        log.append("circular_transaction_detected")
-        
-    if debug:
-        print(f"Trust Score for {user_id}: {score}")
-        print("Applied Rules:", log)
+        log.add("circular_transaction_detected")
 
-    return score
+    return log

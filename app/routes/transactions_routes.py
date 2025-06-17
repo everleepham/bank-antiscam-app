@@ -7,6 +7,7 @@ from app.services.neo4j_service import Neo4jService
 from app.models.neo4j_model import Neo4jTransactionModel
 from app.services.mongo_service import MongoService
 from app.services.trust_service import enforce_trust_policy
+from app.services.score_service import calculate_score, update_score_mongo
 
 redis = RedisTrustScoreService()
 bp = Blueprint('transactions', __name__, url_prefix='/transactions')
@@ -29,6 +30,9 @@ def make_transaction(tx_data: dict):
     Neo4jTransactionModel().create(node_transaction_data)
     MongoTransactionModel().create(tx_data)
     Neo4jService().connect_user_transaction_user(connection_data)
+    new_score = calculate_score(tx_data.sender.user_id, tx_data.transaction_id, tx_data.device_id)
+    if new_score:
+        update_score_mongo(tx_data.sender.user_id)
     return {"message": "Transaction created successfully"}
 
 

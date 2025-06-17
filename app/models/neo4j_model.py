@@ -119,7 +119,7 @@ class Neo4jTransactionModel(Neo4jBaseModel):
         CREATE (t:Transaction {
             transaction_id: $transaction_id,
             amount: $amount,
-            status: $status
+            status: $status,
             timestamp: $timestamp
         })
         RETURN id(t) AS node_id

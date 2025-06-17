@@ -20,23 +20,19 @@ class MongoService:
         )
         return list({doc["user_id"] for doc in cursor})
 
-    def login(self, email, password):
-        user = self.user_model.read_by_email(email)
-        if user and user.password == password:
-            return user
-        return None
     
     def get_score(self, user_id):
         user = self.user_model.read(user_id)
         if user:
-            return user.score
+            return user["score"]
         return None
     
     def update_score(self, user_id, score=100):
         user = self.user_model.read(user_id)
         if user:
-            user.score = score
-            return self.user_model.update(user_id, user)
+            user["score"] = score
+            user_obj = User(**user)
+            return self.user_model.update(user_id, user_obj)
         return None
     
     # Transactions

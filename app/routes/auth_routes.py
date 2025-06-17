@@ -5,7 +5,8 @@ from app.models.mongo_model import MongoUserModel, DeviceLogModel
 from app.services.mongo_service import MongoService
 from app.models.neo4j_model import Neo4jUserModel
 from app.services.mongo_service import MongoService
-from app.services.trust_service import enforce_trust_policy, get_new_score
+from app.services.trust_service import enforce_trust_policy
+from app.services.score_service import get_score
 from app.utils.trust_score import SCORE
 
 bp = Blueprint('users', __name__, url_prefix='/users')
@@ -28,16 +29,15 @@ def login(credentials: dict, device_log: dict = None):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     user_id = user["user_id"]
-    score = get_new_score(user_id)
+    score = get_score(user_id)
     enforce_trust_policy(user_id, action="login", score=score)
 
-    
     DeviceLogModel().create(device_log)
     return {"message": "Login successful", "trust_score": score}
 
 @bp.route('/score/{user_id}', methods=['POST'])
 def get_user_score(user_id: str):
-    new_score = get_new_score(user_id)
+    new_score = get_score(user_id)
     if new_score is None:
         raise HTTPException(status_code=404, detail="User not found")
     for score in SCORE:

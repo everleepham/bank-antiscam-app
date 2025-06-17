@@ -58,6 +58,16 @@ class MongoUserModel:
     
     def read_by_email(self, email: str):
         return self.collection.find_one({"email": email})
+    
+    def update(self, user_id: str, user: User):
+        update_data = user.dict(exclude_unset=True)
+        result = self.collection.find_one_and_update(
+            {"user_id": user_id},
+            {"$set": update_data},
+            return_document=ReturnDocument.AFTER
+        )
+        return result if result else None
+            
 
 class MongoTransactionModel:
     def __init__(self):
