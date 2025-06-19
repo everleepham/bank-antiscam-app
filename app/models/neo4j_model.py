@@ -23,8 +23,18 @@ class DeviceSchema(BaseModel):
     ip_address: str = Field(..., description="Device IP address")
 
 class Neo4jUserModel(Neo4jBaseModel):
+    @staticmethod
+    def create_constraints(tx):
+        query = """
+        CREATE CONSTRAINT user_id_unique IF NOT EXISTS
+        FOR (u:User)
+        REQUIRE u.user_id IS UNIQUE
+        """
+        tx.run(query)
+
     def create(self, user: UserSchema):
         with self.driver.session() as session:
+            print(f"[DEBUG] Creating user: {user.user_id}")
             return session.execute_write(self._create_user_node, user.dict())
 
     def read(self, user_id=None):
@@ -44,16 +54,15 @@ class Neo4jUserModel(Neo4jBaseModel):
     @staticmethod
     def _create_user_node(tx, data):
         query = """
-        CREATE (u:User {
-            user_id: $user_id,
-            fname: $fname,
-            lname: $lname,
-            score: $score
-        })
+        MERGE (u:User {user_id: $user_id})
+        ON CREATE SET u.fname = $fname,
+                    u.lname = $lname,
+                    u.score = $score
         RETURN id(u) AS node_id
         """
         result = tx.run(query, **data)
         return result.single()["node_id"]
+
 
     @staticmethod
     def _get_user_by_id(tx, user_id):
@@ -82,20 +91,28 @@ class Neo4jUserModel(Neo4jBaseModel):
 
     @staticmethod
     def _delete_user(tx, user_id):
-        query = """
-        MATCH (u:User {user_id: $user_id})
-        WITH u, count(u) AS c
-        DELETE u
-        RETURN c > 0 AS deleted
-        """
-        result = tx.run(query, user_id=user_id)
-        return result.single()["deleted"]
+        count_result = tx.run("MATCH (u:User {user_id: $user_id}) RETURN COUNT(u) AS count", user_id=user_id)
+        count = count_result.single()["count"]
+        if count == 0:
+            return False
+        tx.run("MATCH (u:User {user_id: $user_id}) DELETE u", user_id=user_id)
+        return True
 
 
 class Neo4jTransactionModel(Neo4jBaseModel):
-        
+    @staticmethod
+    def create_constraints(tx):
+        query = """
+        CREATE CONSTRAINT transaction_id_unique IF NOT EXISTS
+        FOR (t:Transaction)
+        REQUIRE t.transaction_id IS UNIQUE
+        """
+        tx.run(query)
+
+    
     def create(self, txn: TransactionSchema):
         with self.driver.session() as session:
+            print(f"[DEBUG] Creating txn: {txn.transaction_id}")
             return session.execute_write(self._create_transaction_node, txn.dict())
         
     def read(self, transaction_id=None):
@@ -116,16 +133,15 @@ class Neo4jTransactionModel(Neo4jBaseModel):
     @staticmethod
     def _create_transaction_node(tx, data):
         query = """
-        CREATE (t:Transaction {
-            transaction_id: $transaction_id,
-            amount: $amount,
-            status: $status,
-            timestamp: $timestamp
-        })
+        MERGE (t:Transaction {transaction_id: $transaction_id})
+        ON CREATE SET t.amount = $amount,
+                    t.timestamp = $timestamp,
+                    t.status = $status
         RETURN id(t) AS node_id
         """
         result = tx.run(query, **data)
         return result.single()["node_id"]
+
     
     @staticmethod
     def _get_transaction_by_id(tx, transaction_id):
@@ -154,17 +170,26 @@ class Neo4jTransactionModel(Neo4jBaseModel):
     
     @staticmethod
     def _delete_transaction(tx, transaction_id):
-        query = """
-        MATCH (t:Transaction {transaction_id: $transaction_id})
-        WITH count(t) AS c, t
-        DELETE t
-        RETURN c > 0 AS deleted
-        """
-        result = tx.run(query, transaction_id=transaction_id)
-        return result.single()["deleted"]
-    
+        count_result = tx.run(
+            "MATCH (t:Transaction {transaction_id: $transaction_id}) RETURN COUNT(t) AS count",
+            transaction_id=transaction_id
+        )
+        count = count_result.single()["count"]
+        if count == 0:
+            return False
+        tx.run("MATCH (t:Transaction {transaction_id: $transaction_id}) DELETE t", transaction_id=transaction_id)
+        return True
+
     
 class Neo4jDeviceModel(Neo4jBaseModel):
+    @staticmethod
+    def create_constraints(tx):
+        query = """
+        CREATE CONSTRAINT device_id_unique IF NOT EXISTS
+        FOR (d:Device)
+        REQUIRE d.device_id IS UNIQUE
+        """
+        tx.run(query)
         
     def create(self, device: DeviceSchema):
         with self.driver.session() as session:
@@ -184,19 +209,18 @@ class Neo4jDeviceModel(Neo4jBaseModel):
         with self.driver.session() as session:
             return session.execute_write(self._delete_device, device_id)
         
+    
     @staticmethod
     def _create_device_node(tx, data):
         query = """
-        CREATE (d:Device {
-            device_id: $device_id,
-            mac_address: $mac_address,
-            ip_address: $ip_address
-        })
+        MERGE (d:Device {device_id: $device_id})
+        ON CREATE SET d.mac_address = $mac_address,
+                    d.ip_address = $ip_address
         RETURN id(d) AS node_id
         """
         result = tx.run(query, **data)
         return result.single()["node_id"]
-    
+
     @staticmethod
     def _get_device_by_id(tx, device_id):
         query = """
@@ -224,11 +248,9 @@ class Neo4jDeviceModel(Neo4jBaseModel):
     
     @staticmethod
     def _delete_device(tx, device_id):
-        query = """
-        MATCH (d:Device {device_id: $device_id})
-        WITH count(d) AS c, d
-        DELETE d
-        RETURN c > 0 AS deleted
-        """
-        result = tx.run(query, device_id=device_id)
-        return result.single()["deleted"]
+        count_result = tx.run("MATCH (d:Device {device_id: $device_id}) RETURN COUNT(d) AS count", device_id=device_id)
+        count = count_result.single()["count"]
+        if count == 0:
+            return False
+        tx.run("MATCH (d:Device {device_id: $device_id}) DELETE d", device_id=device_id)
+        return True

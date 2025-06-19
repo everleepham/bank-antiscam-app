@@ -3,10 +3,7 @@ from app.services.mongo_service import (
     MongoService,
 )
 from app.db.mongo import db
-from app.services.mongo_service import MongoService
 
-
-mongo_service = MongoService()
 
 def create_dummy_user(mongo_service, email="a@example.com"):
     return mongo_service.create_user(

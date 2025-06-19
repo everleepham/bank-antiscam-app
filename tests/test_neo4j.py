@@ -26,10 +26,6 @@ def device_model():
     return Neo4jDeviceModel()
 
 @pytest.fixture
-def neo4j_service():
-    return Neo4jService()
-
-@pytest.fixture
 def test_user():
     return UserSchema(
         user_id="001",
@@ -65,6 +61,11 @@ def test_device():
     )
     
     
+def cleanup_user_device(user_model, device_model, user_id, device_id):
+    user_model.delete(user_id)
+    device_model.delete(device_id)
+
+    
 def test_connection(user_model, txn_model, device_model, neo4j_service, test_user):
     assert user_model is not None
     assert txn_model is not None
@@ -74,7 +75,6 @@ def test_connection(user_model, txn_model, device_model, neo4j_service, test_use
     # Test connection by creating a dummy user
     node_id = user_model.create(test_user)
     assert isinstance(node_id, int)
-
 
     
 def test_user_crud(user_model, test_user):
@@ -93,6 +93,9 @@ def test_user_crud(user_model, test_user):
     # Delete
     deleted = user_model.delete(test_user.user_id)
     assert deleted is True
+    
+    user_model.delete(test_user.user_id)
+
 
 def test_transaction_crud(txn_model, test_transaction):
     # Create
@@ -110,6 +113,9 @@ def test_transaction_crud(txn_model, test_transaction):
     # Delete
     deleted = txn_model.delete(test_transaction.transaction_id)
     assert deleted is True
+    
+    # in case conftest doesn't clean up
+    txn_model.delete(test_transaction.transaction_id)
 
 def test_device_crud(device_model, test_device):
     # Create
@@ -142,6 +148,23 @@ def test_user_transaction_connection(neo4j_service, user_model, txn_model, test_
 
     connections = neo4j_service.get_user_transactions_connections({"user_id": test_user.user_id})
     assert any(tx["transaction_id"] == test_transaction.transaction_id for tx in connections)
+    
+def test_user_user_connection(neo4j_service, txn_model, user_model, test_user, test_receiver, test_transaction):
+    user_model.create(test_user)
+    user_model.create(test_receiver)
+    txn_model.create(test_transaction)
+
+    result = neo4j_service.connect_user_transaction_user({
+        "sender_id": test_user.user_id,
+        "receiver_id": test_receiver.user_id,
+        "transaction_id": test_transaction.transaction_id
+    })
+    
+    assert result is not None
+    
+    connections = neo4j_service.get_user_user_connections({"user_id": test_user.user_id})
+    assert any(conn["receiver_id"] == test_receiver.user_id for conn in connections)
+
 
 def test_user_device_connection(neo4j_service, device_model, user_model, test_user, test_device):
     user_model.create(test_user)
@@ -156,10 +179,8 @@ def test_user_device_connection(neo4j_service, device_model, user_model, test_us
     result = neo4j_service.get_user_device_connections({"user_id": test_user.user_id})
     assert result[0]["total_devices"] == 1
 
-    user_model.delete(test_user.user_id)
-    device_model.delete(test_device.device_id)
 
-def test_detect_circular_transaction():
+def test_detect_circular_transaction(neo4j_service, user_model, txn_model):
     user = UserSchema(user_id="001", fname="Circular", lname="Test", score=10)
     user_model.create(user)
 
@@ -202,11 +223,26 @@ def test_detect_circular_transaction():
         "transaction_id": txn.transaction_id
     })
 
-    result = neo4j_service.detect_circular_transaction({
+    path = neo4j_service.detect_circular_transaction({
         "user_id": user.user_id,
         "max_depth": 4,
         "max_diff_minutes": 10
     })
 
-    assert result is not None
-    assert result["num_transactions"] >= 3
+    assert path is not None
+    
+    path_nodes = path.nodes
+    path_ids = []
+    for node in path_nodes:
+        if "transaction_id" in node:
+            path_ids.append(node["transaction_id"])
+        else:
+            path_ids.append(node["user_id"])
+    assert "001" in path_ids
+    assert "002" in path_ids
+    assert "003" in path_ids
+    assert "004" in path_ids
+    assert "005" in path_ids
+    
+    assert path_nodes[0]["user_id"] == "001"
+    assert path_nodes[-1]["user_id"] == "001"

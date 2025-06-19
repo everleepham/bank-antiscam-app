@@ -28,16 +28,23 @@ def clean_neo4j():
     with driver.session() as session:
         session.run("MATCH (n) DETACH DELETE n")
     yield
+    
+    
+@pytest.fixture(scope="session", autouse=True)
+def setup_neo4j_constraints():
+    print("Setting up Neo4j constraints...")
+    Neo4jService.setup_constraints()
+    yield
 
         
-@pytest.fixture(scope="function")
+@pytest.fixture
+def redis_service():
+    return RedisTrustScoreService(ttl=3600)
+
+@pytest.fixture
 def mongo_service():
     return MongoService()
 
 @pytest.fixture
-def service():
-    return RedisTrustScoreService(ttl=1800)
-
-@pytest.fixture(scope="function")
 def neo4j_service():
     return Neo4jService()
