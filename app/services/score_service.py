@@ -2,6 +2,7 @@ from .suspicious_service import log_suspicious_actions
 from app.services.redis_service import RedisTrustScoreService
 from app.services.mongo_service import MongoService
 from app.utils.trust_rules import RULES
+from app.utils.trust_score import SCORE
 from typing import Optional
 
 # get score
@@ -11,6 +12,12 @@ from typing import Optional
 redis = RedisTrustScoreService()
 mongo = MongoService()
 
+
+def get_flag_and_warning(score: int):
+    for level in SCORE:
+        if level["min"] <= score <= level["max"]:
+            return level["flag"], level["warning"]
+    return "Unknown", None
 
 def get_score(user_id: str) -> int:
     score = redis.get_or_load_score(user_id, mongo.get_score)
@@ -25,6 +32,7 @@ def calculate_score(user_id: str, transaction_id=None, device_id=None) -> int:
         if rule in suspicious_actions:
             score += RULES[rule]
 
+    # update score in redis right after calculating
     redis.update_score(user_id, score)
     return score
 

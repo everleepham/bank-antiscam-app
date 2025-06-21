@@ -1,8 +1,4 @@
 from app.models.mongo_model import User, DeviceLog, Transaction, UserInfo
-from app.services.mongo_service import (
-    MongoService,
-)
-from app.db.mongo import db
 
 
 def create_dummy_user(mongo_service, email="a@example.com"):

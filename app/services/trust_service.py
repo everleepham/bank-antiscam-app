@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 from app.utils.trust_policies import TRUST_POLICY
+from app.utils.trust_score import SCORE
 from app.models.mongo_model import MongoTransactionModel
 from app.services.mongo_service import MongoService
 from app.services.redis_service import RedisTrustScoreService
@@ -9,9 +10,9 @@ from app.models.mongo_model import TransactionStatus
 from typing import Optional
 
 
+
 redis = RedisTrustScoreService()
 mongo = MongoService()
-
 
 def get_policy_by_score(score: int): # find the limitation by score
     for policy in TRUST_POLICY:
@@ -26,18 +27,18 @@ def enforce_trust_policy(
     amount: float = None,
     action: str = "transaction", # or login,
     score: Optional[int] = None
-    
 ):   
     # get score
     if score is None:
         score = get_score(user_id)
         
     # get policy matched  
+    
     policy = get_policy_by_score(score)
     if not policy:
         raise HTTPException(500, "Unable to determine trust policy")
     
-    restrictions = policy["restrictions"]
+    restrictions = policy["restrictions"] or {}
     now = datetime.now()
     
     if restrictions.get("locked"):

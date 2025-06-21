@@ -2,7 +2,7 @@ import pytest
 from app.services.mongo_service import MongoService
 from app.services.redis_service import RedisTrustScoreService
 from app.services.neo4j_service import Neo4jService
-
+from app.run import app
 from app.db.mongo import db as test_db
 from app.db.redis import redis_client 
 from app.db.neo4j import neo4j_driver   
@@ -48,3 +48,8 @@ def mongo_service():
 @pytest.fixture
 def neo4j_service():
     return Neo4jService()
+
+@pytest.fixture
+def client():
+    with app.test_client() as client:
+        yield client

@@ -1,7 +1,7 @@
-from app import create_app
+#!/usr/bin/env python
+import threading
+from app.run import run_app
 
 
-app = create_app()
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5080, debug=True)
+if __name__ == "__main__":
+    run_app()

@@ -16,9 +16,9 @@ class User(BaseModel):
     lname: str = Field(..., description="User last name")
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., description="User password")
-    new_user: bool = Field(default=True, description="Is the user new?")
-    score: int = Field(default=0, description="User score")
-    plafond: float = Field(default=1000.0, description="User transaction plafond")
+    new_user: Optional[bool] = Field(default=True, description="Is the user new?")
+    score: Optional[int] = Field(default=100, description="User score")
+    plafond: Optional[float] = Field(default=1000.0, description="User transaction plafond")
     
 class UserInfo(BaseModel):
     user_id: str = Field(..., description="Unique user identifier")
@@ -31,7 +31,7 @@ class Transaction(BaseModel):
     sender_device_id: str = Field(..., description="Unique device identifier")
     recipient: UserInfo
     amount: float = Field(..., gt=0, description="Transaction amount")
-    timestamp: datetime = Field(default_factory=datetime.now, description="Transaction timestamp")
+    timestamp: Optional[datetime] = Field(default_factory=datetime.now, description="Transaction timestamp")
     status: TransactionStatus = Field(default=TransactionStatus.PENDING)
     flag_reason: Optional[str] = Field(default=None, description="Reason why transaction is flagged")
     
