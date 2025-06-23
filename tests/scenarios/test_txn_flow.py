@@ -65,6 +65,8 @@ def test_normal_user_exceed_total_limit():
         amount=500,
         timestamp=iso_now(),
     )
+    
+    # expected result: blocked
     assert res.status_code == 403
     assert "Limit exceeded" in res.text
 
@@ -73,7 +75,7 @@ def test_risky_user_high_txn_limit():
     user, _ = register_user(BASE_EMAIL.format("risky"), "Risky", score=60)
     recipient, _ = register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
 
-    # Gửi 3 giao dịch > 1000€
+    # make 3 transactions > 1000€
     for amt in [1200, 1500, 1300]:
         res = create_transaction(
             sender_email=user["email"],
@@ -87,7 +89,7 @@ def test_risky_user_high_txn_limit():
         )
         assert res.status_code == 200
 
-    # Gửi lần thứ 4
+    # sending a 4th transaction > 1000€ 
     res = create_transaction(
         sender_email=user["email"],
         sender_fname="Risky",
@@ -98,6 +100,8 @@ def test_risky_user_high_txn_limit():
         amount=1100,
         timestamp=iso_now(),
     )
+    
+    # expected result: blocked
     assert res.status_code == 403
     assert "Max 3 transactions" in res.text
 
@@ -150,6 +154,8 @@ def test_fraud_prone_user_transaction_too_large():
         amount=200,
         timestamp=iso_now(),
     )
+    
+    # expected result: blocked
     assert res.status_code == 403
     error_json = res.json()
     assert "Max €100 per transaction" in error_json["error"]

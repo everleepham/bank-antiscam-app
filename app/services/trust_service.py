@@ -55,14 +55,16 @@ def enforce_trust_policy(
     }))
     
     if "total_amount_limit" in restrictions:
+        print(f"txn list: {transactions}")
         total = sum(t["amount"] for t in transactions)
         if total + amount > restrictions["total_amount_limit"]:
             abort(403, description=f"Limit exceeded: Max €{restrictions['total_amount_limit']} in 3 months")
 
     if "max_high_value_txns" in restrictions:
-        high_value_txn = [t for t in transactions if t['amount'] >= restrictions['threshold']]
-        if amount > restrictions["threshold"] and len(high_value_txn) > restrictions["max_high_value_txns"]:
-            abort(403, description=f"Limit exceeded: Max {restrictions['max_high_value_txns']} transactions > €{restrictions['threshold']} in 3 months")
+        start_of_month = now.replace(day=1)
+        monthly_txns = [t for t in transactions if t["timestamp"] >= start_of_month and t["amount"] >= restrictions["threshold"]]
+        if len(monthly_txns) >= restrictions["max_high_value_txns"]:
+            abort(403, description=f"Limit exceeded: Max {restrictions['max_high_value_txns']} transactions > €{restrictions['threshold']} in 1 month")
 
     if "max_txns_per_month" in restrictions:
         start_of_month = now.replace(day=1)
