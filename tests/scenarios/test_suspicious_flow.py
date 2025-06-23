@@ -227,3 +227,85 @@ def test_shared_device_detection():
     data = resp.json()
     assert data["reasons"] == ['shared_device_count']
     assert data["score_calculated"] == 80
+    
+def test_has_suspicious_connection():
+    email = "connection.suspicious@gmail.com"
+    user, password = register_user(email, "User", score=100, new_user=False)
+    
+    # create 4 suspicious users
+    suspicious_users = []
+    for i in range(4):
+        sus_email = f"sus.user{i}@gmail.com"
+        sus_user, _ = register_user(sus_email, "Sus", score=30, new_user=False)
+        suspicious_users.append(sus_user)
+    
+    login(email, password, "AA:AA:AA:AA:AA:01", "192.168.0.10")
+    
+    # make a transaction to 4 suspicious users
+    for sus_user in suspicious_users:
+        create_transaction(
+            user["email"],
+            user["fname"],
+            user["lname"],
+            sus_user["email"],
+            sus_user["fname"],
+            sus_user["lname"],
+            amount=200,
+            timestamp=datetime.datetime.utcnow().isoformat(),
+        )
+    
+    resp = requests.post(f"{url}/score/calculate", json={"email": email})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "suspicious_connections" in data["reasons"]
+    assert data["score_calculated"] == 80
+    
+    
+import datetime
+import requests
+
+def test_circular_transactions_detection():
+    # create 4 users
+    user1, _ = register_user("user1@example.com", "User1", score=100, new_user=False)
+    user2, _ = register_user("user2@example.com", "User2", score=100, new_user=False)
+    user3, _ = register_user("user3@example.com", "User3", score=100, new_user=False)
+    user4, _ = register_user("user4@example.com", "User4", score=100, new_user=False)
+
+    # create transactions that form a circular flow
+    # user1 -> user2 -> user3 -> user4 -> user1
+    now = datetime.datetime.utcnow().isoformat()
+    create_transaction(
+        user1["email"], user1["fname"], user1["lname"],
+        user2["email"], user2["fname"], user2["lname"],
+        amount=100,
+        timestamp=now
+    )
+    create_transaction(
+        user2["email"], user2["fname"], user2["lname"],
+        user3["email"], user3["fname"], user3["lname"],
+        amount=150,
+        timestamp=now
+    )
+    create_transaction(
+        user3["email"], user3["fname"], user3["lname"],
+        user4["email"], user4["fname"], user4["lname"],
+        amount=200,
+        timestamp=now
+    )
+    create_transaction(
+        user4["email"], user4["fname"], user4["lname"],
+        user1["email"], user1["fname"], user1["lname"],
+        amount=50,
+        timestamp=now
+    )
+
+    resp = requests.post(f"{url}/score/calculate", json={"email": user1["email"]})
+
+    # check response
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "circular_transaction_detected" in data["reasons"]
+    assert data["score_calculated"] == 70
+
+
+

@@ -144,7 +144,7 @@ def has_suspicious_connections(user_id):
     for relation in user_relations:
         if relation['score'] < 50:
             suspicious_connections.append(relation)
-    if len(suspicious_connections) > 3:
+    if len(suspicious_connections) > 3: #has more than 3 suspicious connections
         return True
     return False
 

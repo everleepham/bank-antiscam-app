@@ -67,7 +67,7 @@ def make_transaction():
     print(f"Created relationship in Neo4j: {connection_data}")
 
     # calculate trust score
-    new_score, _ = calculate_score(sender_user["user_id"], str(transaction_id), txn.sender_device_id)
+    new_score, _ = calculate_score(sender_user["user_id"], str(transaction_id))
     if new_score:
         update_score_mongo(sender_user["user_id"])
     
