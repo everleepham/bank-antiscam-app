@@ -64,10 +64,14 @@ def test_get_transactions_by_sender_and_recipient(mongo_service):
 
     txn1 = Transaction(
         sender=UserInfo(
-            user_id=sender.user_id, user_fname=sender.fname, user_lname=sender.lname
+            user_id=sender.user_id,
+            user_email=sender.email, 
+            user_fname=sender.fname, 
+            user_lname=sender.lname
         ),
         recipient=UserInfo(
             user_id=recipient.user_id,
+            user_email=recipient.email,
             user_fname=recipient.fname,
             user_lname=recipient.lname,
         ),
@@ -79,11 +83,15 @@ def test_get_transactions_by_sender_and_recipient(mongo_service):
     txn2 = Transaction(
         sender=UserInfo(
             user_id=recipient.user_id,
+            user_email=recipient.email,
             user_fname=recipient.fname,
             user_lname=recipient.lname,
         ),
         recipient=UserInfo(
-            user_id=sender.user_id, user_fname=sender.fname, user_lname=sender.lname
+            user_id=sender.user_id,
+            user_email=sender.email,
+            user_fname=sender.fname, 
+            user_lname=sender.lname
         ),
         sender_device_id="xyz456",
         amount=300.0,

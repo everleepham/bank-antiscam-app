@@ -1,4 +1,4 @@
-# User Score Calculation Test Cases Report
+# Report: User Score Calculation Test Cases
 
 ## Overview
 
@@ -56,6 +56,7 @@ This document describes the test cases created to verify the user scoring system
   - Call the score calculation API.
   - Expect the reason `"suspicious_connections"` and a lower score.
 #### Result: Passed
+
 ### 4. Circular Transactions Test
 
 - **Purpose:** Detect circular transactions within the user network (e.g., user1 sends to user2, user2 to user3, user3 to user4, and user4 back to user1).

@@ -1,4 +1,4 @@
-# User Transaction Policy Test Cases Report
+# Report: User Transaction Policy Test Cases
 
 ## Overview
 

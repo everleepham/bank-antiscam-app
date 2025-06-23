@@ -34,6 +34,10 @@ def register():
     user_data = User(**request.json)
     user_data.password = hash_password(user_data.password)
 
+    user = MongoUserModel().collection.find_one({"email": user_data.email})
+    if user:
+        return jsonify({"error": "User with this email already exists"}), 400
+
     mongo_user_model.create(user_data)
 
     # Neo4j

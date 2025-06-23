@@ -1,4 +1,4 @@
-# User Login & Score Classification Test Cases Report
+# Report: User Login & Score Classification Test Cases
 
 ## Overview
 
@@ -13,6 +13,7 @@ This document describes the test cases designed to verify the user registration,
     ├── scenarios
         ├── test_auth_flow.py
         ├── test_suspicious_flow.py
+
         └── test_txn_flow.py
  
 ```
@@ -47,7 +48,7 @@ This document describes the test cases designed to verify the user registration,
 
 ---
 
-### 3. Login Test for Normal User (score 75–89)
+### 3. Login Test for Normal User (score 75 – 89)
 
 - **Purpose:** Verify that a user with a score between 75 and 89 is classified as "Normal" and receives a transaction limit warning.
 - **Scenario:**
@@ -60,7 +61,7 @@ This document describes the test cases designed to verify the user registration,
 
 ---
 
-### 4. Login Test for Risky User (score 50–74)
+### 4. Login Test for Risky User (score 50 – 74)
 
 - **Purpose:** Verify that a user with score between 50 and 74 is classified as "Risky" and warned about transaction limits.
 - **Scenario:**
@@ -73,7 +74,7 @@ This document describes the test cases designed to verify the user registration,
 
 ---
 
-### 5. Login Test for Fraud Prone User (score 30–49)
+### 5. Login Test for Fraud Prone User (score 30 – 49)
 
 - **Purpose:** Verify that users scoring between 30 and 49 are classified as "Fraud Prone" with specific transaction restrictions.
 - **Scenario:**
@@ -117,7 +118,7 @@ This document describes the test cases designed to verify the user registration,
 ## How to Run the Tests
 
 1. Ensure the backend API and dependent services (MongoDB, Redis, Neo4j) are running.
-2. Run the tests using your preferred test runner or execute `pytest tests/test_auth_flow.py`.
+2. Run the tests using your preferred test runner or execute `pytest tests/scenarios/test_auth_flow.py`.
 
 ---
 

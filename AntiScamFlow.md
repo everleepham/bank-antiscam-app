@@ -1,4 +1,4 @@
-# User Trust Score System – Project Flow Documentation
+# Banking Trust Score System – Project Flow Documentation
 
 ###### Please read this carefully!
 
@@ -17,7 +17,6 @@ This backend system calculates a **trust score** for each user based on their be
   - User data is saved into **MongoDB**.
   - A corresponding **user node is created in Neo4j**.
 
----
 
 ### 2. Login Flow
 
@@ -54,7 +53,6 @@ def get_score(user_id: str) -> int:
 }
 ```
 
----
 
 ### 3. Transaction Flow
 
@@ -82,14 +80,14 @@ def make_transaction():
     - Transaction data is saved into both **MongoDB** and **Neo4j**.
     - **Trust score is recalculated** right after the transaction.
 
----
 
 ### 4. Score Flow
 
 - Score is **only updated** when:
   - A user **makes a transaction**
   - A user **explicitly requests score recalculation**
-- **Note:** Score is **not recalculated during login** to keep login fast and avoid delays.
+> ⚠️ **Note:**  
+>  Score is **not recalculated during login** to keep login fast and avoid delays.
 - When score is recalculated:
   1. It is **updated in Redis first**
   2. Then **MongoDB fetches the value from Redis** and updates its copy to ensure consistency
@@ -171,39 +169,59 @@ def log_suspicious_actions(user_id, transaction_id=None):
 This structure allows the system to maintain fairness and avoid over-penalizing users for the same behavior, while still catching repeated risky activities.
 
 ---
+### Okay so that was the flow, but does it work?
 
-## Common Questions
+**Yes!** Check out the test cases and the test reports in the doc folder.
 
-### How can a user reset their score?
+```bash
+├── doc
+    ├── authentication_test.md
+    ├── suspicious_detect_and_score_test.md
+    └── transaction_policy_test.md
+```
+
+I also prepared a postman collection for testing endpoints
+
+---
+
+## Questions that might be in your mind
+
+
+#### 1. How can a user reset their score?
 
 - **Currently not supported**.
 - This is a **Minimum Viable Product (MVP)** and focuses only on core suspicious behavior detection.
 
----
 
-### Why update the score in Redis first?
+#### 2. Why update the score in Redis first?
 
 - Redis is used for **fast lookups**.
 - Redis has a **Time To Live (TTL) of 1 hour**.
 - If Redis is not updated after a penalty, the cached score will become outdated and **out of sync** with MongoDB, leading to **inconsistent behavior**.
 
----
+#### 3. What are the uses cases of this project?
 
-### Why is there no frontend?
+- **Fraud detection**: Block transactions that exceeds limits in real-time.
+- **Access control**: Restrict features based on trust score.
+- **User classification**: Group users into Trusted, Risky, etc.
+- **Policy enforcement**: Enforce transaction limits and behavior rules.
+- **Risk analytics**: Log violations to analyze risky patterns.
+- **Microservice integration**: Plug into larger platforms (e.g., fintech, e-commerce).
+
+#### 4. Why is there no frontend?
 
 - The system logic is **complex** with many edge cases.
 - A frontend would make testing slower and harder.
 - Instead, we focused on:
-  - **Comprehensive test cases**
+  - **Comprehensive integration test cases**
   - **Postman collections** to test all logic and API flows tightly
 
----
 
-### Is AI used in this project?
+#### 5. Is AI used in this project?
 
-- **Yes**, AI tools were used **as mentors**, not as code writers.
+- **Yes, absolutely**, AI tools were used **as mentors**, not as code writers.
 - We used them for suggestions, logic reviews, and debugging assistance.
-- If there are places in the code that are not optimal, please know that **we did our best** and wrote everything ourselves.
+- We tried to not to use AI as much as we can so if there are places in the code that are not optimal, please know that **we did our best** and wrote everything ourselves.
 
 ---
 
