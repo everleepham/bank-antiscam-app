@@ -9,5 +9,5 @@ services:
     env_file:
       - .env
     volumes:
-      - ./app:/app/app  # map thư mục app
-      - ./main.py:/app/main.py # map file main.py
+      - ./app:/app/app  
+      - ./main.py:/app/main.py
