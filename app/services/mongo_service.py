@@ -1,4 +1,4 @@
-from app.models.mongo_model import MongoUserModel, MongoTransactionModel, DeviceLogModel, User, Transaction, DeviceLog
+from app.models.mongo_model import MongoUserModel, MongoTransactionModel, DeviceLogModel, User, Transaction, DeviceLog, TransactionStatus
 
 class MongoService:
     def __init__(self):
@@ -12,7 +12,8 @@ class MongoService:
     
     def get_user_by_id(self, user_id):
         return self.user_model.read(user_id)
-    
+
+
     def get_users_by_device(self, device_id):
         cursor = self.device_log_model.collection.find(
             {"device_id": device_id},
@@ -47,6 +48,13 @@ class MongoService:
     
     def get_transactions_by_recipient(self, user_id):
         return list(self.transaction_model.collection.find({"recipient.user_id": user_id}))
+
+    def verify_transaction(self, transaction_id):
+        result = self.transaction_model.collection.update_one(
+            {"transaction_id": transaction_id},
+            {"$set": {"status": TransactionStatus.VERIFIED.value}}
+        )
+        return result.modified_count == 1
     
     # Device Logs
     def log_device(self, device_log: DeviceLog):

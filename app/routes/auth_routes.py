@@ -7,6 +7,7 @@ from app.models.neo4j_model import Neo4jUserModel, UserSchema
 from app.services.mongo_service import MongoService
 from app.services.trust_service import enforce_trust_policy
 from app.services.score_service import get_score, get_flag_and_warning
+from app.services.score_service import calculate_score, update_score_mongo
 from app.utils.trust_score import SCORE
 from flask import request, jsonify, Blueprint
 import hashlib
@@ -16,6 +17,7 @@ user_bp = Blueprint('users', __name__)
 
 redis = RedisTrustScoreService()
 mongo = MongoService()
+mongo_user_model = MongoUserModel()
 node = Neo4jUserModel()
 
 
@@ -32,8 +34,7 @@ def register():
     user_data = User(**request.json)
     user_data.password = hash_password(user_data.password)
 
-    mongo = MongoUserModel()
-    mongo.create(user_data)
+    mongo_user_model.create(user_data)
 
     # Neo4j
     user_node = UserSchema(
@@ -95,20 +96,42 @@ def login():
     }), 200
     
 
-@user_bp.route('/score/{user_id}', methods=['GET'])
-def get_user_score(user_id: str):
+@user_bp.route('/score', methods=['POST'])
+def get_user_score():
+    email = request.json.get("email")
+    user = mongo_user_model.read_by_email(email)
+    if not user:
+        return {"error": "User not found"}, 404
+    user_id = user["user_id"]
     new_score = get_score(user_id)
     if new_score is None:
         raise HTTPException(status_code=404, detail="User not found")
     for score in SCORE:
         if score["min"] <= new_score <= score["max"]:
             return {
-                "email": user_id, 
+                "email": email, 
                 "score": new_score, 
                 "flag": score["flag"], 
                 "message": score["warning"]
                 }
     return None
-    
+
+
+@user_bp.route('/score/calculate', methods=['POST'])
+def calculate_user_score():
+    email = request.json.get("email")
+    user = mongo_user_model.read_by_email(email)
+    if not user:
+        return {"error": "User not found"}, 404
+    user_id = user["user_id"]
+    old_score = user["score"]
+    calculated_score, reasons = calculate_score(user_id)
+    if calculated_score:
+        update_score_mongo(user_id, old_score)
+    return {
+        "old_score": old_score,
+        "score_calculated": calculated_score,
+        "reasons": list(reasons)
+    }
 
 

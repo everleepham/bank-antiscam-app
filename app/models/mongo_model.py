@@ -19,11 +19,13 @@ class User(BaseModel):
     new_user: Optional[bool] = Field(default=True, description="Is the user new?")
     score: Optional[int] = Field(default=100, description="User score")
     plafond: Optional[float] = Field(default=1000.0, description="User transaction plafond")
+    score_deductions_applied: Optional[list] = Field(None)
     
 class UserInfo(BaseModel):
-    user_id: str = Field(..., description="Unique user identifier")
-    user_fname: str = Field(..., description="User first name")
-    user_lname: str = Field(..., description="User last name")
+    user_id: Optional[str] = None
+    user_email: str = Field(..., description="Unique user identifier")
+    user_fname: Optional[str] = Field(..., description="User first name")
+    user_lname: Optional[str] = Field(..., description="User last name")
 
 class Transaction(BaseModel):
     transaction_id: Optional[str] = Field(None, description="Auto-set incremented transaction ID")
@@ -58,7 +60,7 @@ class MongoUserModel:
     
     def read_by_email(self, email: str):
         return self.collection.find_one({"email": email})
-    
+
     def update(self, user_id: str, user: User):
         update_data = user.dict(exclude_unset=True)
         result = self.collection.find_one_and_update(
@@ -67,8 +69,20 @@ class MongoUserModel:
             return_document=ReturnDocument.AFTER
         )
         return result if result else None
-            
+    
+    def append_deductions(self, user_id: str, rules: list[str]):
+        user = self.collection.find_one({"user_id": user_id}, {"score_deductions_applied": 1})
+        if not user or not isinstance(user.get("score_deductions_applied"), list):
+            self.collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"score_deductions_applied": []}}
+            )
+        self.collection.update_one(
+            {"user_id": user_id},
+            {"$addToSet": {"score_deductions_applied": {"$each": rules}}}
+        )
 
+            
 class MongoTransactionModel:
     def __init__(self):
         self.collection = db.transactions

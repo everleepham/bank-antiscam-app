@@ -4,10 +4,15 @@ from app.utils.trust_rules import RULES
 
 from .neo4j_service import Neo4jService
 from .mongo_service import MongoService
+import logging
+
+
+logging.basicConfig(level=logging.DEBUG)  
+logger = logging.getLogger(__name__)
 
 # Mongo service
 def check_high_transactions_amount(user_id, transaction_id):
-
+    user_id = str(user_id).zfill(3)
     txn_model = MongoTransactionModel()
     user_model = MongoUserModel()
 
@@ -36,6 +41,11 @@ def check_high_transactions_amount(user_id, transaction_id):
             }}
         )
         return True
+    logger.debug("Transaction found: %s", transaction)
+    logger.debug("Sender ID in txn: %s", sender_id)
+    logger.debug("User ID passed: %s", user_id)
+    logger.debug("Amount: %s | Plafond: %s", amount, plafond)
+    logger.debug("Comparison result: %s", amount > (plafond * 2))
 
     return False
 
@@ -84,7 +94,7 @@ def check_suspicious_monthly_spent(user_id):
         return False 
 
     average_past = sum(past_months) / len(past_months)
-
+    
     return current_spent > 2 * average_past
     
 
@@ -114,17 +124,20 @@ def has_multiple_devices(user_id): # 1 user uses >5 devices
     user_devices = MongoService().get_devices_by_user(user_id)
     return len(user_devices) > 5
 
-def has_shared_device_count(user_id, device_id): # multiple users use the same device
-    device_users = MongoService().get_users_by_device(device_id)
-    if len(device_users) > 5 and user_id in device_users:
-        return True
+def has_shared_device_count(user_id: str) -> bool:
+    user_devices = MongoService().get_devices_by_user(user_id)  # giả sử hàm này trả về list device_id
+
+    for device_id in user_devices:
+        device_users = MongoService().get_users_by_device(device_id)
+        if len(device_users) > 5 and user_id in device_users:
+            return True
     return False
 
 # Neo4j serviceS
 def has_suspicious_connections(user_id):
     neo4j_service = Neo4jService()
     data = {
-        "sender_id": user_id,
+        "user_id": user_id,
     }
     user_relations = neo4j_service.get_user_user_connections(data)
     suspicious_connections = []
@@ -145,7 +158,7 @@ def has_circular_transactions(user_id):
     return circular_transaction is not None
 
 
-def log_suspicious_actions(user_id, transaction_id=None, device_id=None):
+def log_suspicious_actions(user_id, transaction_id=None):
     log = set()
 
     # check suspicious transactions amount
@@ -162,10 +175,10 @@ def log_suspicious_actions(user_id, transaction_id=None, device_id=None):
 
     # check multiple devices
     if has_multiple_devices(user_id):
-        log.add("multiple_devices")
+        log.add("has_multiple_devices")
 
     # check shared device count
-    if has_shared_device_count(user_id, device_id):
+    if has_shared_device_count(user_id):
         log.add("shared_device_count")
 
     # check suspicious connections
