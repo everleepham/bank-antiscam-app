@@ -99,6 +99,10 @@ The system makes **split-second decisions** on user access levels.
 
 ---
 
+## How to run
+1. Create a .env file, follow the `.env.sample` file
+2. Run `docker compose up --build`
+
 ## Future Improvements
 - Transition from rule-based to ML-based scoring
 - Visualization of trust graphs

@@ -41,8 +41,8 @@ def calculate_score(user_id: str, transaction_id=None) -> tuple[int, set[str]]:
         if rule not in suspicious_actions:
             continue
 
-        # only this rule can be applied multiple time
-        if rule == "high_transaction_amount":
+        # only theses rules can be applied multiple time
+        if rule == "high_transaction_amount" or rule == "circular_transaction_detected":
             score += RULES[rule]
         elif rule not in already_applied_rules and score > 0:
             score += RULES[rule]
