@@ -30,19 +30,6 @@ def make_transaction():
     except ValidationError as e:
         return {"error": "Invalid transaction format", "details": e.errors()}, 400
 
-    transaction_id = get_next_id("transaction_id")
-    txn.transaction_id = transaction_id 
-
-    # create txn node in Neo4j
-    txn_node = TransactionSchema(
-        transaction_id=transaction_id,
-        amount=txn.amount,
-        status=txn.status,
-        timestamp=txn.timestamp.isoformat()
-    )
-    neo4j_txn_model.create(txn_node)
-    print(f"Created transaction node in Neo4j: {txn_node}")
-
     # get user_id to create relationship in Neo4j
     sender_user = mongo_user_model.read_by_email(txn.sender.user_email)
     recipient_user = mongo_user_model.read_by_email(txn.recipient.user_email)
@@ -53,8 +40,34 @@ def make_transaction():
     txn.sender.user_id = sender_user["user_id"]
     txn.recipient.user_id = recipient_user["user_id"]
 
+    # enforce trust policy
+    try:
+        enforce_trust_policy(
+            user_id=txn.sender.user_id,
+            mongo_model=mongo_txn_model,
+            amount=txn.amount,
+            action="transaction"
+        )
+    except HTTPException as e:
+        return {"error": "Transaction blocked by trust policy", "details": str(e)}, 403
+
+    # generate ID
+    transaction_id = get_next_id("transaction_id")
+    txn.transaction_id = transaction_id 
+    
+    # save transaction in MongoDB
     mongo_txn_model.create(txn)
     print(f"Saved transaction in MongoDB: {txn}")
+    
+    # create txn node in Neo4j
+    txn_node = TransactionSchema(
+        transaction_id=transaction_id,
+        amount=txn.amount,
+        status=txn.status,
+        timestamp=txn.timestamp.isoformat()
+    )
+    neo4j_txn_model.create(txn_node)
+    print(f"Created transaction node in Neo4j: {txn_node}")
 
     print(f'Sender Id: {sender_user["user_id"]}, Recipient Id: {recipient_user["user_id"]}')
     

@@ -75,10 +75,8 @@ def login():
     flag, warning = get_flag_and_warning(score)
 
     if score is not None:
-        try:
-            enforce_trust_policy(user_id, action="login", score=score)
-        except HTTPException as e:
-            return jsonify({"error": str(e)})
+        enforce_trust_policy(user_id, action="login", score=score)
+
 
     if device_log:
         device_log["user_id"] = user_id

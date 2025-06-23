@@ -18,7 +18,7 @@ class User(BaseModel):
     password: str = Field(..., description="User password")
     new_user: Optional[bool] = Field(default=True, description="Is the user new?")
     score: Optional[int] = Field(default=100, description="User score")
-    plafond: Optional[float] = Field(default=1000.0, description="User transaction plafond")
+    plafond: Optional[float] = Field(default=2000.0, description="User transaction plafond")
     score_deductions_applied: Optional[list] = Field(None)
     
 class UserInfo(BaseModel):

@@ -8,7 +8,7 @@ from app.services.redis_service import RedisTrustScoreService
 from app.services.score_service import get_score
 from app.models.mongo_model import TransactionStatus
 from typing import Optional
-
+from flask import abort, jsonify
 
 
 redis = RedisTrustScoreService()
@@ -42,8 +42,8 @@ def enforce_trust_policy(
     now = datetime.now()
     
     if restrictions.get("locked"):
-        raise HTTPException(403, "Account is locked. Identity verification required")
-    
+        abort(403, description="Account is locked. Identity verification required")
+
     # check action, if not transaction, end 
     if action != "transaction" or not restrictions:
         return
@@ -57,21 +57,22 @@ def enforce_trust_policy(
     if "total_amount_limit" in restrictions:
         total = sum(t["amount"] for t in transactions)
         if total + amount > restrictions["total_amount_limit"]:
-            raise HTTPException(403, f"Limit exceeded: Max €{restrictions['total_amount_limit']} in 3 months")
-        
+            abort(403, description=f"Limit exceeded: Max €{restrictions['total_amount_limit']} in 3 months")
+
     if "max_high_value_txns" in restrictions:
-        high_value_txn = [t for t in transactions if t['amount'] > restrictions['threshold']]
+        high_value_txn = [t for t in transactions if t['amount'] >= restrictions['threshold']]
         if amount > restrictions["threshold"] and len(high_value_txn) > restrictions["max_high_value_txns"]:
-            raise HTTPException(403, f"Limit exceeded: Max {restrictions['max_high_value_txns']} transactions > €{restrictions['threshold']} in 3 months")
+            abort(403, description=f"Limit exceeded: Max {restrictions['max_high_value_txns']} transactions > €{restrictions['threshold']} in 3 months")
 
     if "max_txns_per_month" in restrictions:
         start_of_month = now.replace(day=1)
         monthly_txns = [t for t in transactions if t["timestamp"] >= start_of_month]
 
         if len(monthly_txns) >= restrictions["max_txns_per_month"]:
-            raise HTTPException(403, f"Limit exceeded: Max {restrictions['max_txns_per_month']} transactions per month")
+            abort(403, description=f"Limit exceeded: Max {restrictions['max_txns_per_month']} transactions per month")
+
         if amount > restrictions["max_txn_amount"]:
-            raise HTTPException(403, f"Transaction too high: Max €{restrictions['max_txn_amount']} per transaction for this trust level")
+            abort(403, description=f"Transaction too high: Max €{restrictions['max_txn_amount']} per transaction for this trust level")
 
     return
             

@@ -85,7 +85,7 @@ def test_login_critical():
     print("User created with score 20, email:", email)
     login_resp = login_user(email, password, "AA:BB:CC:DD:EE:FF", "192.168.0.1")
     print("Login response:", login_resp.text)
-    assert login_resp.status_code == 200
+    assert login_resp.status_code == 403
     try:
         login_data = login_resp.json()
     except JSONDecodeError:
@@ -93,5 +93,5 @@ def test_login_critical():
         print("Response text:", login_resp.text)
         raise
 
-    assert login_data["error"] == "403: Account is locked. Identity verification required"
+    assert login_data["error"] == "Account is locked. Identity verification required"
 

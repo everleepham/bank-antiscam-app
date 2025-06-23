@@ -92,8 +92,8 @@ This document describes the test cases designed to verify the user registration,
 - **Scenario:**
   - Create a user with score 20.
   - Attempt login.
-  - Expect HTTP 200 response with error field:  
-    `"403: Account is locked. Identity verification required"`.
+  - Expect HTTP 403 response with error field:  
+    `"Account is locked. Identity verification required"`.
 
 #### Result: Passed
 
@@ -111,10 +111,6 @@ This document describes the test cases designed to verify the user registration,
 - [x] User register feature
 - [x] User login feature
 - [x] User message based on score and level
-
-
-
-
 
 ---
 

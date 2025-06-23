@@ -1,118 +1,173 @@
+import datetime
 import pytest
-from datetime import datetime
-from app.services.score_service import update_score_mongo
+from helpers import register_user, create_transaction
 
-alice = {
-    "user_id": "001",
-    "user_fname": "Alice",
-    "user_lname": "Wonder"
+BASE_EMAIL = "policytest+{}@test.com"
+RECIPIENT = {
+    "email": "recipient@test.com",
+    "fname": "Recep",
+    "lname": "Target"
 }
 
-bob = {
-    "user_id": "002",
-    "user_fname": "Bob",
-    "user_lname": "Builder"
-}
-
-device_id = "003"
+@pytest.fixture(scope="module", autouse=True)
+def setup_recipient():
+    register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
 
 
-def set_user_score(user_id, score):
-    update_score_mongo(user_id, score)
+def iso_now(offset_days=0):
+    return (datetime.datetime.utcnow() + datetime.timedelta(days=offset_days)).isoformat()
 
-class TestTransactionLimits:
 
-    def login_user(self, client, score):
-        set_user_score(alice["user_id"], score)
-        login_data = {
-            "email": "alice@example.com",
-            "password": "password123",
-            "device_log": {
-                "device_id": device_id,
-                "ip": "127.0.0.1",
-                "timestamp": datetime.now().isoformat()
-            }
-        }
-        return client.post("/login", json=login_data)
+# trusted user with high score, no limitations
+def test_trusted_user_allowed():
+    user, _ = register_user(BASE_EMAIL.format("trusted"), "Trusted", score=95)
+    recipient, _ = register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
 
-    def create_transaction(self, client, amount, txn_id="001"):
-        txn_data = {
-            "transaction_id": txn_id.zfill(3),
-            "sender": alice,
-            "recipient": bob,
-            "amount": amount,
-            "timestamp": datetime.now().isoformat(),
-            "sender_device_id": device_id
-        }
-        return client.post("/transactions/", json=txn_data)
+    res = create_transaction(
+        sender_email=user["email"],
+        sender_fname="Trusted",
+        sender_lname="User",
+        recipient_email=RECIPIENT["email"],
+        recipient_fname=RECIPIENT["fname"],
+        recipient_lname=RECIPIENT["lname"],
+        amount=99999,
+        timestamp=iso_now()
+    )
+    assert res.status_code == 200
+    
+    
+def test_normal_user_exceed_total_limit():
+    user, _ = register_user(BASE_EMAIL.format("normal"), "Normal", score=80)
+    recipient, _ = register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
 
-    def test_trusted_user_no_limit(self, client):
-        # You are Alice with score 95 (Trusted user)
-        login_resp = self.login_user(client, 95)
-        assert login_resp.status_code == 200
-        assert login_resp.json.get("trust_score", 0) >= 90
+    # Gửi 2 transaction trước để tạo tổng = 4800€
+    for amount in [2000, 2800]:
+        res = create_transaction(
+            sender_email=user["email"],
+            sender_fname="Normal",
+            sender_lname="User",
+            recipient_email=RECIPIENT["email"],
+            recipient_fname=RECIPIENT["fname"],
+            recipient_lname=RECIPIENT["lname"],
+            amount=amount,
+            timestamp=iso_now(-10),
+        )
+        assert res.status_code == 200
 
-        # Big transaction > 5000€ allowed
-        txn_resp = self.create_transaction(client, 10000, txn_id="010")
-        assert txn_resp.status_code == 200
-        assert txn_resp.json["message"] == "Transaction created successfully"
+    # Gửi thêm để vượt 5000€
+    res = create_transaction(
+        sender_email=user["email"],
+        sender_fname="Normal",
+        sender_lname="User",
+        recipient_email=RECIPIENT["email"],
+        recipient_fname=RECIPIENT["fname"],
+        recipient_lname=RECIPIENT["lname"],
+        amount=500,
+        timestamp=iso_now(),
+    )
+    assert res.status_code == 403
+    assert "Limit exceeded" in res.text
 
-    def test_normal_user_limit_5000_in_3_months(self, client):
-        # You are Alice with score 80 (Normal user)
-        login_resp = self.login_user(client, 80)
-        assert login_resp.status_code == 200
 
-        # 3 transactions total 4900€ allowed
-        for i, amount in enumerate([2000, 1500, 1400], start=1):
-            resp = self.create_transaction(client, amount, txn_id=str(i))
-            assert resp.status_code == 200
+def test_risky_user_high_txn_limit():
+    user, _ = register_user(BASE_EMAIL.format("risky"), "Risky", score=60)
+    recipient, _ = register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
 
-        # 4th transaction exceeding 5000€ total blocked
-        resp = self.create_transaction(client, 200, txn_id="004")
-        assert resp.status_code in (400, 403)
+    # Gửi 3 giao dịch > 1000€
+    for amt in [1200, 1500, 1300]:
+        res = create_transaction(
+            sender_email=user["email"],
+            sender_fname="Risky",
+            sender_lname="User",
+            recipient_email=RECIPIENT["email"],
+            recipient_fname=RECIPIENT["fname"],
+            recipient_lname=RECIPIENT["lname"],
+            amount=amt,
+            timestamp=iso_now(-2),
+        )
+        assert res.status_code == 200
 
-    def test_risky_user_limit_3_big_tx_in_1_month(self, client):
-        # Alice with score 60 (Risky user)
-        login_resp = self.login_user(client, 60)
-        assert login_resp.status_code == 200
+    # Gửi lần thứ 4
+    res = create_transaction(
+        sender_email=user["email"],
+        sender_fname="Risky",
+        sender_lname="User",
+        recipient_email=RECIPIENT["email"],
+        recipient_fname=RECIPIENT["fname"],
+        recipient_lname=RECIPIENT["lname"],
+        amount=1100,
+        timestamp=iso_now(),
+    )
+    assert res.status_code == 403
+    assert "Max 3 transactions" in res.text
 
-        # 3 transactions > 1000€ allowed
-        for i in range(1, 4):
-            resp = self.create_transaction(client, 1200, txn_id=str(i))
-            assert resp.status_code == 200
 
-        # 4th big transaction > 1000€ blocked
-        resp = self.create_transaction(client, 1500, txn_id="004")
-        assert resp.status_code in (400, 403)
+def test_fraud_prone_user_exceed_transaction_count():
+    user, _ = register_user(BASE_EMAIL.format("fraud_count"), "Fraud", score=40)
+    recipient, _ = register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
 
-        # Smaller transaction <= 1000€ allowed
-        resp = self.create_transaction(client, 900, txn_id="005")
-        assert resp.status_code == 200
+    for _ in range(10):
+        res = create_transaction(
+            sender_email=user["email"],
+            sender_fname="Fraud",
+            sender_lname="Count",
+            recipient_email=RECIPIENT["email"],
+            recipient_fname=RECIPIENT["fname"],
+            recipient_lname=RECIPIENT["lname"],
+            amount=50,
+            timestamp=iso_now(-1),
+        )
+        assert res.status_code == 200
 
-    def test_fraud_prone_user_limit_10_tx_max_100_each(self, client):
-        # Alice with score 40 (Fraud-prone)
-        login_resp = self.login_user(client, 40)
-        assert login_resp.status_code == 200
+    # 10th transactions
+    res = create_transaction(
+        sender_email=user["email"],
+        sender_fname="Fraud",
+        sender_lname="Count",
+        recipient_email=RECIPIENT["email"],
+        recipient_fname=RECIPIENT["fname"],
+        recipient_lname=RECIPIENT["lname"],
+        amount=50,
+        timestamp=iso_now(),
+    )
+    assert res.status_code == 403
+    error_json = res.json()
+    assert "Max 10 transactions per month" in error_json["error"]
 
-        # 10 transactions < 100€ allowed
-        for i in range(1, 11):
-            resp = self.create_transaction(client, 90, txn_id=str(i))
-            assert resp.status_code == 200
 
-        # 11th transaction < 100€ blocked
-        resp = self.create_transaction(client, 90, txn_id="011")
-        assert resp.status_code in (400, 403)
+def test_fraud_prone_user_transaction_too_large():
+    user, _ = register_user(BASE_EMAIL.format("fraud_amt"), "Fraud", score=35)
+    recipient, _ = register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
 
-        # Transaction > 100€ blocked immediately
-        resp = self.create_transaction(client, 150, txn_id="012")
-        assert resp.status_code in (400, 403)
 
-    def test_critical_user_blocked(self, client):
-        # Alice with score 20 (Critical user)
-        login_resp = self.login_user(client, 20)
-        # Login blocked
-        assert login_resp.status_code in (401, 403)
+    res = create_transaction(
+        sender_email=user["email"],
+        sender_fname="Fraud",
+        sender_lname="TooLarge",
+        recipient_email=RECIPIENT["email"],
+        recipient_fname=RECIPIENT["fname"],
+        recipient_lname=RECIPIENT["lname"],
+        amount=200,
+        timestamp=iso_now(),
+    )
+    assert res.status_code == 403
+    error_json = res.json()
+    assert "Max €100 per transaction" in error_json["error"]
 
-        # Any transaction blocked
-        resp = self.create_transaction(client, 50, txn_id="001")
-        assert resp.status_code in (401, 403)
+
+def test_critical_user_blocked():
+    user, _ = register_user(BASE_EMAIL.format("critical"), "Critical", score=10)
+    recipient, _ = register_user(RECIPIENT["email"], RECIPIENT["fname"], score=100)
+
+    res = create_transaction(
+        sender_email=user["email"],
+        sender_fname="Critical",
+        sender_lname="Blocked",
+        recipient_email=RECIPIENT["email"],
+        recipient_fname=RECIPIENT["fname"],
+        recipient_lname=RECIPIENT["lname"],
+        amount=10,
+        timestamp=iso_now(),
+    )
+    assert res.status_code == 403
+    assert "Account is locked" in res.text
