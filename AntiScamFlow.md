@@ -208,11 +208,10 @@ I also prepared a postman collection for testing endpoints
 - **Risk analytics**: Log violations to analyze risky patterns.
 - **Microservice integration**: Plug into larger platforms (e.g., fintech, e-commerce).
 
-#### 4. Why is there no frontend?
+#### 4. Does this app have frontend?
 
-- The system logic is **complex** with many edge cases.
-- A frontend would make testing slower and harder.
-- Instead, we focused on:
+- **Yes!** Check out the fontend folder and read the README.md
+- But still, the system logic is **complex** with many edge cases so we focused on:
   - **Comprehensive integration test cases**
   - **Postman collections** to test all logic and API flows tightly
 

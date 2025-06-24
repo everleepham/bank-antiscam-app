@@ -20,7 +20,7 @@ The system makes **split-second decisions** on user access levels.
 - Simulate trust decisions like:
   - Flagging unusual transactions
   - Locking accounts on suspicious logins
-  - Requiring 2FA for certain actions
+  - Detects suspicious behavior
 - **Rich metadata**: location, device, time, transaction patterns
 
 ---
@@ -28,10 +28,9 @@ The system makes **split-second decisions** on user access levels.
 ## Databases Used
 
 #### Neo4j
-- Maps user relationships, IPs, device fingerprints, behavior
+- Maps user relationships, IPs, device, behavior
 - Detects patterns like:
   - Shared devices/IPs
-  - Botnets and sock puppets
   - Suspicious user networks
 
 #### MongoDB
@@ -78,13 +77,13 @@ The system makes **split-second decisions** on user access levels.
 
 5. **Trust Score Calculated (Rule-Based)**
    - Suspicious connection → −20 pts  
-   - New account → −10 pts  
+   - New account → −5 pts  
    - Same IP/MAC as 5+ users → −30 pts  
-   - If the user logins from a different country → -30 pts
+   - If the user has circular transaction → -30 pts
    - Spend >2x average → −30 pts  
-     - *Can be recovered if justified*
 
-   - Final score stored in Redis for ultra-fast lookup
+     - *Final score stored in Redis for ultra-fast lookup*
+     - For the clearer flow explanation, **checkout the doc AntiScamFlow.md**
 
 6. **Limitations based on Trust Score**
 
