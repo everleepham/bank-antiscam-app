@@ -10,11 +10,8 @@ This document describes the test cases created to verify the user scoring system
 └── tests
     ├── __init__.py
     ├── conftest.py
-    ├── scenarios
-        ├── test_auth_flow.py
-        ├── test_suspicious_flow.py
-        └── test_txn_flow.py
- 
+    └── scenarios
+        └── test_suspicious_flow.py
 ```
 
 
@@ -46,7 +43,6 @@ This document describes the test cases created to verify the user scoring system
 
 #### Result: Passed
 ### 3. Suspicious Connections Test
-
 
 
 - **Purpose:** Detect if a user has more than 3 connections to users with scores below 50, then the user’s score is penalized with the reason `"suspicious_connections"`.
@@ -110,6 +106,7 @@ This document describes the test cases created to verify the user scoring system
 
 ## Recommendations
 
+- Make sure the Mongo database is empty before the tests
 - Make sure Neo4j data correctly reflects transactions to effectively test circular transaction detection.
 - Handle edge cases like non-existent users or devices gracefully.
 - Extend tests to cover additional scoring rules as the system evolves.

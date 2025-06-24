@@ -10,9 +10,7 @@ This document describes the test cases created to verify the enforcement of tran
 └── tests
     ├── __init__.py
     ├── conftest.py
-    ├── scenarios
-        ├── test_auth_flow.py
-        ├── test_suspicious_flow.py
+    └── scenarios
         └── test_txn_flow.py
 ```
 
@@ -131,6 +129,7 @@ This document describes the test cases created to verify the enforcement of tran
 
 ## Recommendations
 
+- Make sure the Mongo database is empty before the tests
 - Extend tests to cover edge cases such as boundary scores (e.g., exactly 75 or 50).
 - Add tests for concurrency and simultaneous transactions.
 - Regularly update tests if policy thresholds or logic change.

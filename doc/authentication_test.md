@@ -10,12 +10,8 @@ This document describes the test cases designed to verify the user registration,
 └── tests
     ├── __init__.py
     ├── conftest.py
-    ├── scenarios
-        ├── test_auth_flow.py
-        ├── test_suspicious_flow.py
-
-        └── test_txn_flow.py
- 
+    └── scenarios
+        └── test_auth_flow.py
 ```
 
 - `test_auth_flow.py`: Contains tests related to user registration, login flows, and score classification.
@@ -124,6 +120,7 @@ This document describes the test cases designed to verify the user registration,
 
 ## Notes
 
+- Make sure the Mongo database is empty before the tests
 - These tests use mock device logs with randomized MAC addresses and IPs.
 - Tests check HTTP status, JSON response fields (`score`, `flag`, `warning`, `error`).
 - The scoring thresholds and warning messages are configurable on the backend.

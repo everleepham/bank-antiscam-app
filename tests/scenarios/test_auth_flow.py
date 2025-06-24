@@ -4,9 +4,11 @@ import requests
 
 from requests.exceptions import JSONDecodeError
 
+from dotenv import load_dotenv
 
-url = 'http://127.0.0.1:5050'
+load_dotenv
 
+url = os.getenv("URL", "http://localhost:5050")
 
 # mock device log
 def create_dummy_device_log(mac_address, ip_address):
