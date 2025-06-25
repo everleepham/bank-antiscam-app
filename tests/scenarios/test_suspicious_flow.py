@@ -1,6 +1,6 @@
 import datetime
 import requests
-from helpers import register_user, login, create_transaction, url
+from helpers import register_user, login, create_transaction, url, random_email
 
 
 def test_high_transaction_amount():
@@ -197,16 +197,13 @@ def test_has_suspicious_connection():
     assert "suspicious_connections" in data["reasons"]
     assert data["score_calculated"] == 80
     
-    
-import datetime
-import requests
 
 def test_circular_transactions_detection():
     # create 4 users
-    user1, _ = register_user("user1@example.com", "User1", score=100, new_user=False)
-    user2, _ = register_user("user2@example.com", "User2", score=100, new_user=False)
-    user3, _ = register_user("user3@example.com", "User3", score=100, new_user=False)
-    user4, _ = register_user("user4@example.com", "User4", score=100, new_user=False)
+    user1, _ = register_user(random_email(), "User1", score=100, new_user=False)
+    user2, _ = register_user(random_email(), "User2", score=100, new_user=False)
+    user3, _ = register_user(random_email(), "User3", score=100, new_user=False)
+    user4, _ = register_user(random_email(), "User4", score=100, new_user=False)
 
     # create transactions that form a circular flow
     # user1 -> user2 -> user3 -> user4 -> user1

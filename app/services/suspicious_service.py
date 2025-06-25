@@ -51,6 +51,12 @@ def check_high_transactions_amount(user_id, transaction_id):
 
 
 def check_suspicious_monthly_spent(user_id):
+    """
+    Aggregates verified transactions by month for a given user and detects
+    if the current month's spending exceeds twice the average spending of
+    previous months, indicating potentially suspicious behavior.
+    """
+
     now = datetime.now()
     current_year = now.year
     current_month = now.month
@@ -108,10 +114,17 @@ def is_new_account(user_id):
 
     if not user.get("new_user", True):
         return False
+    
+    pipeline = [
+        {"$match": {"sender.user_id": user_id}},
+        {"$count": "txn_count"}
+    ]
 
-    txn_count = txn_model.collection.count_documents({"sender.user_id": user_id})
+    result = list(txn_model.collection.aggregate(pipeline))
 
-    if txn_count >= 3: # has 3+ transactions-> new_user = False
+    txn_count = result[0]["txn_count"] if result else 0
+
+    if txn_count >= 3:  # has 3+ transactions -> new_user = False
         user_model.collection.update_one(
             {"user_id": user_id},
             {"$set": {"new_user": False}}
@@ -119,6 +132,7 @@ def is_new_account(user_id):
         return False
     
     return True
+
 
 def has_multiple_devices(user_id): # 1 user uses >5 devices
     user_devices = MongoService().get_devices_by_user(user_id)

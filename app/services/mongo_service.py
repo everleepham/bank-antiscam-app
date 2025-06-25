@@ -15,11 +15,21 @@ class MongoService:
 
 
     def get_users_by_device(self, device_id):
-        cursor = self.device_log_model.collection.find(
-            {"device_id": device_id},
-            {"user_id": 1, "_id": 0}
-        )
-        return list({doc["user_id"] for doc in cursor})
+        """
+        Filters the documents in the collection to include only those 
+        where the device_id field matches the provided device_id, The second stage,
+        reshapes the documents by including only the user_id field and excluding the 
+        _id field. This ensures that the output contains only the relevant user IDs.
+        """
+    
+        pipeline = [
+            {"$match": {"device_id": device_id}},
+            {"$project": {"user_id": 1, "_id": 0}}
+        ]
+        
+        res = list(self.device_log_model.collection.aggregate(pipeline))
+
+        return list({doc["user_id"] for doc in res})
 
     
     def get_score(self, user_id):
@@ -64,9 +74,20 @@ class MongoService:
         return self.device_log_model.read(device_id)
     
     def get_devices_by_user(self, user_id):
-        cursor = self.device_log_model.collection.find(
-            {"user_id": user_id},
-            {"device_id": 1, "_id": 0}
-        )
-        unique_device_ids = {doc["device_id"] for doc in cursor}
+        """
+        The first stage, filters the documents in the collection to include only 
+        those where the user_id field matches the provided user_id. The second stage,
+        reshapes the documents by including only the device_id field and excluding the 
+        _id field. This ensures that the result contains only the relevant device IDs 
+        without unnecessary metadata.
+        """
+        
+        pipeline = [
+            {"$match": {"user_id": user_id}},
+            {"$project": {"device_id": 1, "_id": 0}}
+        ]
+
+        res = list(self.device_log_model.collection.aggregate(pipeline))
+        
+        unique_device_ids = {doc["device_id"] for doc in res}
         return list(unique_device_ids)

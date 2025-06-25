@@ -169,12 +169,64 @@ def log_suspicious_actions(user_id, transaction_id=None):
 This structure allows the system to maintain fairness and avoid over-penalizing users for the same behavior, while still catching repeated risky activities.
 
 ---
-### Okay so that was the flow, but does it work?
+
+## NoSQL integration explanation
+
+#### 1. Mongodb:
+
+MongoDB is used for storing document-based data such as transactions, devices, and logs.
+
+**Use Cases:**
+- Aggregation pipelines to analyze monthly user spending and detect anomalies compared to previous months.
+- Lookup of devices linked to a specific user and vice versa.
+- Efficient filtering and projection for lightweight data retrieval.
+
+**Where are them?**
+
+- services/suspicious_service.py
+`def check_suspicious_monthly_spent(user_id):`
+
+- services/mongo_service.py
+`def get_users_by_device(self, device_id):`
+`def get_devices_by_user(self, user_id):`
+
+#### 2. Neo4j:
+Neo4j powers the detection of graph-based fraud patterns.
+
+**Use Cases:**
+- Path traversal queries to identify circular transaction flows between users.
+- Helps detect suspicious money laundering behavior by analyzing user–transaction–user cycles within a short time frame.
+
+**Where is it?**
+- services/suspicious_service.py
+`def detect_circular_transaction(self, tx_data):`
+
+#### 3. Redis
+
+Redis is used for high-performance caching.
+
+**Use Cases:**
+- Caching trust scores (`user_id` → `score`) to reduce recomputation.
+- Stored as string values with a TTL of 1 hour.
+- Improves system responsiveness for repeated checks.
+
+---
+
+## Summary
+
+| Database | Purpose                                    |
+|----------|--------------------------------------------|
+| MongoDB  | Document storage and data aggregation      |
+| Neo4j    | Graph analysis and fraud path detection    |
+| Redis    | Caching trust scores for faster access     |
+---
+
+### Okay so that was the flow and I understand what is going on now but does it work?
 
 **Yes!** Check out the test cases and the test reports in the doc folder.
 
 ```bash
-├── doc
+└── doc
     ├── authentication_test.md
     ├── suspicious_detect_and_score_test.md
     └── transaction_policy_test.md
@@ -214,6 +266,7 @@ I also prepared a postman collection for testing endpoints
 - But still, the system logic is **complex** with many edge cases so we focused on:
   - **Comprehensive integration test cases**
   - **Postman collections** to test all logic and API flows tightly
+- If you wanna see how this app behaves, we recommend to use **postman collections** or checkout the **test cases** because testing with frontend might be slower and harder.
 
 
 #### 5. Is AI used in this project?

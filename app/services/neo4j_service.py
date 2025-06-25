@@ -2,19 +2,20 @@ from app.db.neo4j import neo4j_driver
 from app.models.neo4j_model import (
     Neo4jUserModel,
     Neo4jTransactionModel,
-    Neo4jDeviceModel
+    Neo4jDeviceModel,
 )
+
 
 class Neo4jService:
     driver = neo4j_driver
-    
+
     @staticmethod
     def setup_constraints():
         with Neo4jService.driver.session() as session:
             session.execute_write(Neo4jUserModel.create_constraints)
             session.execute_write(Neo4jTransactionModel.create_constraints)
             session.execute_write(Neo4jDeviceModel.create_constraints)
-        
+
     def connect_user_transaction_user(self, tx_data):
         """
         tx_data = {
@@ -84,59 +85,44 @@ class Neo4jService:
             result = session.run(query, **tx_data)
             return result.data()
 
-
-    # def detect_circular_transaction(self, tx_data):
-    #     max_depth = tx_data.get("max_depth", 5)
-    #     query = f"""
-    #     MATCH path = (u:User {user_id: $user_id})-[:MADE*1..{max_depth}]->(txn:Transaction)-[:TO]->(receiver:User)
-    #     WHERE receiver.user_id = $user_id
-    #     WITH nodes(path) AS path_nodes
-    #     WITH [n IN path_nodes WHERE n:Transaction] AS txns, path_nodes
-    #     WITH txns, path_nodes,
-    #         reduce(minTime = datetime("9999-12-31T23:59:59"), t IN txns | 
-    #                 CASE WHEN t.timestamp < minTime THEN t.timestamp ELSE minTime END) AS earliest,
-    #         reduce(maxTime = datetime("0000-01-01T00:00:00"), t IN txns | 
-    #                 CASE WHEN t.timestamp > maxTime THEN t.timestamp ELSE maxTime END) AS latest
-    #     WHERE duration.between(earliest, latest).minutes < $max_diff_minutes
-    #     RETURN 
-    #         [n IN path_nodes | CASE WHEN n:Transaction THEN n.transaction_id ELSE n.user_id END] AS path_ids,
-    #         duration.between(earliest, latest).minutes AS time_diff,
-    #         size(txns) AS num_transactions
-    #     LIMIT 1
-    #     """
-    #     with self.driver.session() as session:
-    #         result = session.run(
-    #             query,
-    #             user_id=tx_data["user_id"],
-    #             max_diff_minutes=tx_data.get("max_diff_minutes", 30),
-    #         )
-    #         record = result.single()
-    #         if record:
-    #             return {
-    #                 "path_ids": record["path_ids"],
-    #                 "time_diff_minutes": record["time_diff"],
-    #                 "num_transactions": record["num_transactions"],
-    #             }
-    #         return None
-
     def detect_circular_transaction(self, tx_data):
-        max_depth = tx_data.get("max_depth", 5)
-        for n in range(2, max_depth + 1):
-            query = """
-            MATCH path = (start:User {user_id: $user_id})
-            """ + "  ".join(
-                [f"-[:MADE]->(:Transaction)-[:TO]->(u{i}:User)" for i in range(2, n+1)]
-            ) + f"""
-            -[:MADE]->(:Transaction)-[:TO]->(start)
-            RETURN path LIMIT 1
-            """
+        """
+        Detecys a circular transaction paths starting and ending at the same user,
+        alternating between User and Transaction nodes. Filters cycles whose total
+        transaction time is within $max_diff_minutes minutes to detect suspicious
+        money laundering or fraud behavior efficiently.
+        """
+
+        max_diff_minutes = tx_data.get("max_diff_minutes", 30)
+        query = """
+        MATCH path = (start:User {user_id: $user_id})-[:MADE|TO*2..20]->(start)
+        WITH path, nodes(path) AS path_nodes
+        WHERE ALL(i IN range(0, size(path_nodes) - 1)
+            WHERE (i % 2 = 0 AND "User" IN labels(path_nodes[i]))
+            OR (i % 2 = 1 AND "Transaction" IN labels(path_nodes[i]))
+        )
+        WITH path_nodes, [n IN path_nodes WHERE "Transaction" IN labels(n)] AS txns
+        WITH path_nodes, txns,
+            reduce(minTime = datetime("9999-12-31T23:59:59"), t IN txns | 
+                CASE WHEN t.timestamp < minTime THEN t.timestamp ELSE minTime END) AS earliest,
+            reduce(maxTime = datetime("0000-01-01T00:00:00"), t IN txns | 
+                CASE WHEN t.timestamp > maxTime THEN t.timestamp ELSE maxTime END) AS latest
+        WHERE duration.between(earliest, latest).minutes < $max_diff_minutes
+        RETURN 
+            [n IN path_nodes | CASE WHEN "Transaction" IN labels(n) THEN n.transaction_id ELSE n.user_id END] AS path_ids,
+            duration.between(earliest, latest).minutes AS time_diff,
+            size(txns) AS num_transactions
+        LIMIT 1
+        """
         with self.driver.session() as session:
             result = session.run(
-                query,
-                user_id=tx_data["user_id"],
-                max_diff_minutes=tx_data.get("max_diff_minutes", 30),
+                query, user_id=tx_data["user_id"], max_diff_minutes=max_diff_minutes
             )
             record = result.single()
             if record:
-                return record["path"]
+                return {
+                    "path_ids": record["path_ids"],
+                    "time_diff": record["time_diff"],
+                    "num_transactions": record["num_transactions"],
+                }
         return None

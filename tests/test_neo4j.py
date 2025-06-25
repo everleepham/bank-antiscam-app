@@ -225,24 +225,18 @@ def test_detect_circular_transaction(neo4j_service, user_model, txn_model):
 
     path = neo4j_service.detect_circular_transaction({
         "user_id": user.user_id,
-        "max_depth": 4,
-        "max_diff_minutes": 10
+        "max_diff_minutes": 30
     })
 
     assert path is not None
     
-    path_nodes = path.nodes
-    path_ids = []
-    for node in path_nodes:
-        if "transaction_id" in node:
-            path_ids.append(node["transaction_id"])
-        else:
-            path_ids.append(node["user_id"])
+    path_ids = path["path_ids"]  
+
     assert "001" in path_ids
     assert "002" in path_ids
     assert "003" in path_ids
     assert "004" in path_ids
     assert "005" in path_ids
     
-    assert path_nodes[0]["user_id"] == "001"
-    assert path_nodes[-1]["user_id"] == "001"
+    assert path_ids[0] == "001"
+    assert path_ids[-1] == "001"

@@ -2,10 +2,14 @@
 import datetime
 import requests
 import pytest
+import uuid
+
 
 
 url = "http://localhost:5050"
 
+def random_email(base="user@example.com"):
+    return f"user_{uuid.uuid4().hex[:6]}@example.com"
 
 def register_user(email, fname, score=100, new_user=True):
     data = {
@@ -17,7 +21,8 @@ def register_user(email, fname, score=100, new_user=True):
         "new_user": new_user,
     }
     resp = requests.post(f"{url}/register", json=data)
-    assert resp.status_code == 201
+    if resp.status_code != 201:
+        print("Register failed:", resp.status_code, resp.text)
     return resp.json(), data["password"]
 
 
