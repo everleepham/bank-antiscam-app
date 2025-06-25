@@ -45,11 +45,11 @@ def get_score(user_id: str) -> int:
 
 ```json
 {
-    "flag": "Trusted",
+    "flag": "Normal",
     "message": "Login successful",
-    "score": 100,
+    "score": 80,
     "user_email": "test.user@gmail.com",
-    "warning": null
+    "warning": "You can make transactions up to €5,000 in 3 months"
 }
 ```
 
